@@ -301,7 +301,7 @@ if pick == "Logistic":
     if fig1:
         st.plotly_chart(fig1, use_container_width=True)
 
-    # Chart 2: Total Volume per Area (Pie)
+    # Chart 2: Total Volume per Area
     if DF_AREA:
         vol_area = df_f.groupby(DF_AREA, as_index=False)[DF_QTY].sum().rename(columns={DF_QTY: "Volume"})
         vol_area = vol_area.sort_values("Volume", ascending=False)
