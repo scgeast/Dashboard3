@@ -67,7 +67,7 @@ if uploaded_file:
         "Sales Man": ["Salesman","Sales Man"],
         "Area": ["Area","Region","Zona"],
         "Plant Name": ["Plant Name","Plant","Factory"],
-        "End Customer Name": ["End Customer","Customer","Buyer"],  # <-- ganti di sini
+        "End Customer Name": ["End Customer","Customer","Buyer"],
         "Volume": ["Volume","Qty","Quantity"],
         "Ritase": ["Ritase","Trips"],
         "Truck No": ["Truck No","Truck Number","Vehicle"],
@@ -110,7 +110,7 @@ if uploaded_file:
     with cols[1]: boxed_metric("Total Plant", df_filtered["Plant Name"].nunique())
     with cols[2]: boxed_metric("Total Volume", f"{df_filtered['Volume'].sum():,.2f}")
     with cols[3]: boxed_metric("Total Ritase", f"{df_filtered['Ritase'].sum():,.2f}")
-    with cols[4]: boxed_metric("End Customer Name", df_filtered["End Customer Name"].nunique())
+    with cols[4]: boxed_metric("Total End Customer Name", df_filtered["End Customer Name"].nunique())  # <- unik
     with cols[5]: boxed_metric("Truck Mixer", df_filtered["Truck No"].nunique())
 
     # =========================
