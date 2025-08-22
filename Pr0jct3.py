@@ -160,78 +160,98 @@ if uploaded_file:
     st.plotly_chart(styled_chart(fig_vol_day, height=400), use_container_width=True)
 
     # =========================
-# 3. Delivery Performance per Area & Plant
-# =========================
-st.markdown("<h2>🏭 Delivery Performance per Area & Plant</h2>", unsafe_allow_html=True)
-col_area, col_plant = st.columns(2)
-with col_area:
-    vol_area = df_filtered.groupby("Area")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-    max_area = vol_area["Volume"].idxmax() if not vol_area.empty else 0
-    vol_area["Color"] = [highlight_color if i==max_area else color_palette[i%len(color_palette)] for i in range(len(vol_area))]
-    fig_area = px.bar(vol_area, x="Area", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
-                      title="Total Volume per Area (Highlight tertinggi)")
-    fig_area.update_traces(textposition="outside", cliponaxis=False)
-    st.plotly_chart(styled_chart(fig_area), use_container_width=True)
-with col_plant:
-    vol_plant = df_filtered.groupby("Plant Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-    max_plant = vol_plant["Volume"].idxmax() if not vol_plant.empty else 0
-    vol_plant["Color"] = [highlight_color if i==max_plant else color_palette[i%len(color_palette)] for i in range(len(vol_plant))]
-    fig_plant = px.bar(vol_plant, x="Plant Name", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
-                       title="Total Volume per Plant (Highlight tertinggi)")
-    fig_plant.update_traces(textposition="outside", cliponaxis=False)
-    st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
+    # 3. Delivery Performance per Area & Plant
+    # =========================
+    st.markdown("<h2>🏭 Delivery Performance per Area & Plant</h2>", unsafe_allow_html=True)
+    col_area, col_plant = st.columns(2)
+    with col_area:
+        vol_area = df_filtered.groupby("Area")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+        max_area = vol_area["Volume"].idxmax() if not vol_area.empty else 0
+        vol_area["Color"] = [highlight_color if i==max_area else color_palette[i%len(color_palette)] for i in range(len(vol_area))]
+        fig_area = px.bar(vol_area, x="Area", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
+                          title="Total Volume per Area (Highlight tertinggi)")
+        fig_area.update_traces(textposition="outside", cliponaxis=False)
+        st.plotly_chart(styled_chart(fig_area), use_container_width=True)
+    with col_plant:
+        vol_plant = df_filtered.groupby("Plant Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+        max_plant = vol_plant["Volume"].idxmax() if not vol_plant.empty else 0
+        vol_plant["Color"] = [highlight_color if i==max_plant else color_palette[i%len(color_palette)] for i in range(len(vol_plant))]
+        fig_plant = px.bar(vol_plant, x="Plant Name", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
+                           title="Total Volume per Plant (Highlight tertinggi)")
+        fig_plant.update_traces(textposition="outside", cliponaxis=False)
+        st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
 
-# =========================
-# 4. Truck Utilization
-# =========================
-st.markdown("<h2>🚛 Truck Utilization</h2>", unsafe_allow_html=True)
-total_trip = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index(name="Total Trip")
-total_trip["Avg Trip per Truck"] = total_trip["Total Trip"] / num_days
-total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
-total_vol_truck["Avg Load per Trip"] = total_vol_truck["Total Volume"] / num_days
+    # =========================
+    # 4. Truck Utilization
+    # =========================
+    st.markdown("<h2>🚛 Truck Utilization</h2>", unsafe_allow_html=True)
 
-st.plotly_chart(styled_chart(px.bar(total_trip, x="Truck No", y="Total Trip", text="Total Trip",
-                                    color="Truck No", color_discrete_sequence=color_palette,
-                                    title="Total Trip per Truck").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
-st.plotly_chart(styled_chart(px.bar(total_trip, x="Truck No", y="Avg Trip per Truck", text="Avg Trip per Truck",
-                                    color="Truck No", color_discrete_sequence=color_palette,
-                                    title="Avg Trip per Truck (per Day)").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
-st.plotly_chart(styled_chart(px.bar(total_vol_truck, x="Truck No", y="Avg Load per Trip", text="Avg Load per Trip",
-                                    color="Truck No", color_discrete_sequence=color_palette,
-                                    title=f"Avg Load per Truck per Day (Qty ÷ {num_days} hari)").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
+    # Total Trip & Volume per Truck
+    total_trip = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index(name="Total Trip")
+    total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
 
-# =========================
-# 5. Distance Analysis
-# =========================
-st.markdown("<h2>🗺️ Distance Analysis</h2>", unsafe_allow_html=True)
-col_dist1, col_dist2 = st.columns(2)
-with col_dist1:
-    avg_dist_plant = df_filtered.groupby("Plant Name")["Distance"].mean().reset_index()
-    fig_dist_plant = px.bar(avg_dist_plant, x="Plant Name", y="Distance", text="Distance", title="Avg Distance per Plant")
-    fig_dist_plant.update_traces(textposition="outside", cliponaxis=False)
-    st.plotly_chart(styled_chart(fig_dist_plant), use_container_width=True)
-with col_dist2:
-    avg_dist_area = df_filtered.groupby("Area")["Distance"].mean().reset_index()
-    fig_dist_area = px.bar(avg_dist_area, x="Area", y="Distance", text="Distance", title="Avg Distance per Area")
-    fig_dist_area.update_traces(textposition="outside", cliponaxis=False)
-    st.plotly_chart(styled_chart(fig_dist_area), use_container_width=True)
+    # Merge keduanya
+    truck_stats = pd.merge(total_trip, total_vol_truck, on="Truck No", how="outer")
 
-# =========================
-# 6. Sales & Customer Performance
-# =========================
-st.markdown("<h2>💰 Sales & Customer Performance</h2>", unsafe_allow_html=True)
-sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-max_sales = sales_perf["Volume"].idxmax() if not sales_perf.empty else 0
-sales_perf["Color"] = [highlight_color if i==max_sales else color_palette[i%len(color_palette)] for i in range(len(sales_perf))]
-fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
-                   title="Volume per Sales (Highlight tertinggi)")
-fig_sales.update_traces(textposition="outside", cliponaxis=False)
-st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
+    # Hitung rata-rata (dibulatkan tanpa koma)
+    truck_stats["Avg Trip per Truck (per Day)"] = (truck_stats["Total Trip"] / num_days).round(0).astype(int)
+    truck_stats["Avg Load per Trip"] = (truck_stats["Total Volume"] / truck_stats["Total Trip"]).round(0).astype(int)
 
-cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-max_cust = cust_perf["Volume"].idxmax() if not cust_perf.empty else 0
-cust_perf["Color"] = [highlight_color if i==max_cust else color_palette[i%len(color_palette)] for i in range(len(cust_perf))]
-fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
-                  title="Volume per End Customer (Highlight tertinggi)")
-fig_cust.update_traces(textposition="outside", cliponaxis=False)
-st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
+    # Chart Total Trip per Truck
+    fig_trip = px.bar(truck_stats, x="Truck No", y="Total Trip", text="Total Trip",
+                      color="Truck No", color_discrete_sequence=color_palette,
+                      title="Total Trip per Truck")
+    fig_trip.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_trip), use_container_width=True)
+
+    # Chart Avg Trip per Truck (per Day)
+    fig_avg_trip = px.bar(truck_stats, x="Truck No", y="Avg Trip per Truck (per Day)",
+                          text="Avg Trip per Truck (per Day)", color="Truck No",
+                          color_discrete_sequence=color_palette,
+                          title=f"Avg Trip per Truck per Day (Total Trip ÷ {num_days} hari)")
+    fig_avg_trip.update_traces(texttemplate="%{text:.0f}", textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_avg_trip), use_container_width=True)
+
+    # Chart Avg Load per Trip
+    fig_avg_load = px.bar(truck_stats, x="Truck No", y="Avg Load per Trip",
+                          text="Avg Load per Trip", color="Truck No",
+                          color_discrete_sequence=color_palette,
+                          title="Avg Load per Trip (Total Volume ÷ Total Trip)")
+    fig_avg_load.update_traces(texttemplate="%{text:.0f}", textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_avg_load), use_container_width=True)
+
+    # =========================
+    # 5. Distance Analysis
+    # =========================
+    st.markdown("<h2>🗺️ Distance Analysis</h2>", unsafe_allow_html=True)
+    col_dist1, col_dist2 = st.columns(2)
+    with col_dist1:
+        avg_dist_plant = df_filtered.groupby("Plant Name")["Distance"].mean().reset_index()
+        fig_dist_plant = px.bar(avg_dist_plant, x="Plant Name", y="Distance", text="Distance", title="Avg Distance per Plant")
+        fig_dist_plant.update_traces(textposition="outside", cliponaxis=False)
+        st.plotly_chart(styled_chart(fig_dist_plant), use_container_width=True)
+    with col_dist2:
+        avg_dist_area = df_filtered.groupby("Area")["Distance"].mean().reset_index()
+        fig_dist_area = px.bar(avg_dist_area, x="Area", y="Distance", text="Distance", title="Avg Distance per Area")
+        fig_dist_area.update_traces(textposition="outside", cliponaxis=False)
+        st.plotly_chart(styled_chart(fig_dist_area), use_container_width=True)
+
+    # =========================
+    # 6. Sales & Customer Performance
+    # =========================
+    st.markdown("<h2>💰 Sales & Customer Performance</h2>", unsafe_allow_html=True)
+    sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+    max_sales = sales_perf["Volume"].idxmax() if not sales_perf.empty else 0
+    sales_perf["Color"] = [highlight_color if i==max_sales else color_palette[i%len(color_palette)] for i in range(len(sales_perf))]
+    fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
+                       title="Volume per Sales (Highlight tertinggi)")
+    fig_sales.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
+
+    cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+    max_cust = cust_perf["Volume"].idxmax() if not cust_perf.empty else 0
+    cust_perf["Color"] = [highlight_color if i==max_cust else color_palette[i%len(color_palette)] for i in range(len(cust_perf))]
+    fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
+                      title="Volume per End Customer (Highlight tertinggi)")
+    fig_cust.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
