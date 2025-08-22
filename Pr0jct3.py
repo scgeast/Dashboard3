@@ -6,252 +6,141 @@ import plotly.express as px
 # Halaman & Tema
 # =========================
 st.set_page_config(page_title="📦 Dashboard Analyst Delivery & Sales", layout="wide")
-color_palette = ["#00FFFF","#8A2BE2","#00FF00","#FF00FF","#FFD700","#00CED1"]
-highlight_color = "#FF5733"
-theme = st.sidebar.radio("🎨 Pilih Tema", ["Gelap","Terang"])
-bg_color = "#0d0f15" if theme=="Gelap" else "#f0f2f6"
-font_color = "#00FFFF" if theme=="Gelap" else "#003366"
-box_bg = "#121526" if theme=="Gelap" else "#e1e5f2"
+color_palette = ["#00FFFF", "#8A2BE2", "#00FF00", "#FF00FF", "#FFD700"]
 
 # =========================
-# CSS
+# Upload Data
 # =========================
-st.markdown(f"""
-<style>
-body {{background-color: {bg_color}; color: {font_color};}}
-h1,h2,h3,h4 {{color: {font_color}; text-shadow:0 0 10px {font_color};}}
-.metric-box {{background-color: {box_bg}; border:2px solid {font_color}; border-radius:15px; padding:20px;text-align:center;box-shadow:0 0 20px {font_color}; transition: transform 0.3s;}}
-.metric-box:hover {{transform:scale(1.05); box-shadow:0 0 30px #FF00FF,0 0 20px {font_color};}}
-.metric-label {{font-weight:700;font-size:1.2rem;margin-bottom:8px;color:{font_color};}}
-.metric-value {{font-size:2rem;font-weight:900;color:{font_color};text-shadow:0 0 5px #00FFFF;}}
-div.stButton>button {{background-color:{font_color} !important;color:{bg_color} !important;font-weight:700;border-radius:10px;box-shadow:0 0 10px {font_color};}}
-div.stButton>button:hover {{background-color:#FF00FF !important;color:white !important;box-shadow:0 0 20px #FF00FF;}}
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown("<h1 style='text-align:center;'>📦 Dashboard Analyst Delivery & Sales</h1>", unsafe_allow_html=True)
-uploaded_file = st.file_uploader("📂 Upload file Excel (5MB–30MB)", type=["xlsx","xls"])
-
-# =========================
-# Fungsi chart & metric
-# =========================
-def styled_chart(fig, height=None, font_size=12, margin=None, text_position="outside", show_legend=False, title_font_size=18):
-    fig.update_layout(plot_bgcolor=box_bg, paper_bgcolor=box_bg, font=dict(color=font_color,size=font_size),
-                      title_font=dict(color=font_color,size=title_font_size),
-                      xaxis=dict(tickangle=45, gridcolor='#222244'),
-                      yaxis=dict(gridcolor='#222244'), showlegend=show_legend)
-    if height: fig.update_layout(height=height)
-    if margin: fig.update_layout(margin=margin)
-    try: fig.update_traces(textposition=text_position, cliponaxis=False)
-    except: pass
-    return fig
-
-def boxed_metric(label,value):
-    st.markdown(f"<div class='metric-box'><div class='metric-label'>{label}</div><div class='metric-value'>{value}</div></div>", unsafe_allow_html=True)
-
-# =========================
-# MAIN
-# =========================
+uploaded_file = st.file_uploader("Upload File Excel", type=["xlsx"])
 if uploaded_file:
-    # Baca sheet pertama tanpa header
-    df_raw = pd.read_excel(uploaded_file, header=None)
+    df = pd.ExcelFile(uploaded_file).parse("Data")
 
-    # Cari header pertama yang ada kolom Qty
-    header_row = 0
-    for i, row in df_raw.iterrows():
-        if row.notna().any() and any("qty" in str(x).lower() for x in row if x):
-            header_row = i
-            break
+    # Pastikan kolom sesuai
+    df["Tanggal Pengiriman"] = pd.to_datetime(df["Tanggal Pengiriman"])
+    df["Ritase"] = 1  # setiap DP No dianggap 1 trip
+    df["Volume"] = df["Qty"]  # asumsi volume = Qty
 
-    df = pd.read_excel(uploaded_file, header=header_row)
-    df.columns = df.columns.str.strip().str.replace("\n","").str.replace("\r","")
-    st.write("Kolom yang ada di file:", df.columns.tolist())
-
-    # =========================
-    # Mapping kolom utama
-    # =========================
-    mapping = {
-        "Sales Man":["Salesman","Sales Man"],
-        "Area":["Area","Region"],
-        "Plant Name":["Plant Name","Plant"],
-        "End Customer Name":["End Customer","Customer","End Customer Name"],
-        "Truck No":["Truck No","Truck Number"],
-        "Distance":["Distance","Km"]
-    }
-    for target, alt in mapping.items():
-        found = next((c for c in alt if c in df.columns), None)
-        if found: df.rename(columns={found:target}, inplace=True)
-        else: df[target] = "Unknown"
+    # Filter berdasarkan tanggal
+    min_date, max_date = df["Tanggal Pengiriman"].min(), df["Tanggal Pengiriman"].max()
+    date_range = st.date_input("Pilih Rentang Tanggal", [min_date, max_date])
+    df_filtered = df[(df["Tanggal Pengiriman"] >= pd.to_datetime(date_range[0])) &
+                     (df["Tanggal Pengiriman"] <= pd.to_datetime(date_range[1]))]
+    num_days = (pd.to_datetime(date_range[1]) - pd.to_datetime(date_range[0])).days + 1
 
     # =========================
-    # Tanggal
+    # 1. Dashboard Summary
     # =========================
-    date_col = next((c for c in df.columns if c and "date" in str(c).lower()), None)
-    if not date_col:
-        st.error("File harus punya kolom tanggal pengiriman (Dp Date).")
-        st.stop()
-    df.rename(columns={date_col:"Dp Date"}, inplace=True)
-    df["Dp Date"] = pd.to_datetime(df["Dp Date"], errors='coerce')
+    st.markdown("<h2>📊 Summarize</h2>", unsafe_allow_html=True)
+
+    total_ritase = int(df_filtered["Ritase"].sum())
+    total_volume = int(df_filtered["Volume"].sum())
+    total_truck = df_filtered["Truck No"].nunique()
+    total_sales = df_filtered["Salesman"].nunique()
+    total_customer = df_filtered["End Customer Name"].nunique()
+    avg_volume_per_day = int(total_volume / num_days)
+
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1.metric("🚚 Total Ritase", f"{total_ritase}")
+    col2.metric("📦 Total Volume", f"{total_volume}")
+    col3.metric("🚛 Total Truck", f"{total_truck}")
+    col4.metric("🧑‍💼 Salesman", f"{total_sales}")
+    col5.metric("👥 Customers", f"{total_customer}")
+    col6.metric("📊 Avg Volume/Day", f"{avg_volume_per_day}")
 
     # =========================
-    # Qty / Volume
+    # 2. Perform Volume per Day
     # =========================
-    qty_col = next((c for c in df.columns if c and "qty" in str(c).lower()), None)
-    if not qty_col:
-        st.error("File harus punya kolom Qty untuk menghitung Volume / Load.")
-        st.stop()
-    df.rename(columns={qty_col:"Qty"}, inplace=True)
-    df["Volume"] = pd.to_numeric(df["Qty"], errors="coerce").fillna(0)
+    st.markdown("<h2>📈 Perform Volume per Day</h2>", unsafe_allow_html=True)
+    perf_day = df_filtered.groupby("Tanggal Pengiriman")[["Ritase", "Volume"]].sum().reset_index()
+
+    fig_perf_day = px.bar(perf_day, x="Tanggal Pengiriman", y="Volume", text="Volume",
+                          color_discrete_sequence=color_palette, title="Volume per Day")
+    fig_perf_day.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(fig_perf_day, use_container_width=True)
+
+    fig_perf_ritase = px.line(perf_day, x="Tanggal Pengiriman", y="Ritase", markers=True,
+                              color_discrete_sequence=color_palette, title="Ritase per Day")
+    st.plotly_chart(fig_perf_ritase, use_container_width=True)
 
     # =========================
-    # Dp No / Ritase
+    # 3. Delivery Performance
     # =========================
-    dpno_col = next((c for c in df.columns if c and "dp" in str(c).lower()), None)
-    if not dpno_col:
-        st.error("File harus punya kolom Dp No untuk menghitung Ritase / Trip.")
-        st.stop()
-    df.rename(columns={dpno_col:"Dp No"}, inplace=True)
-    df["Ritase"] = 1  # Setiap baris = 1 trip
+    st.markdown("<h2>🚚 Delivery Performance</h2>", unsafe_allow_html=True)
+    delivery_perf = df_filtered.groupby("Tanggal Pengiriman")[["Ritase", "Volume"]].sum().reset_index()
 
-    # =========================
-    # Distance
-    # =========================
-    if "Distance" not in df.columns: df["Distance"] = 0
-    df["Distance"] = pd.to_numeric(df["Distance"], errors="coerce").fillna(0)
-
-    # =========================
-    # Sidebar Filter
-    # =========================
-    st.sidebar.header("🔎 Filter Data")
-    start_date = st.sidebar.date_input("Start Date", df["Dp Date"].min())
-    end_date = st.sidebar.date_input("End Date", df["Dp Date"].max())
-    area = st.sidebar.multiselect("Area", df["Area"].dropna().unique())
-    plant_options = df[df["Area"].isin(area)]["Plant Name"].dropna().unique() if area else df["Plant Name"].dropna().unique()
-    plant = st.sidebar.multiselect("Plant Name", plant_options)
-    salesman = st.sidebar.multiselect("Sales Man", df["Sales Man"].dropna().unique())
-    end_customer = st.sidebar.multiselect("End Customer Name", df["End Customer Name"].dropna().unique())
-    if st.sidebar.button("🔄 Reset Filter"): st.experimental_rerun()
-
-    df_filtered = df[(df["Dp Date"]>=pd.to_datetime(start_date)) & (df["Dp Date"]<=pd.to_datetime(end_date))]
-    if area: df_filtered = df_filtered[df_filtered["Area"].isin(area)]
-    if plant: df_filtered = df_filtered[df_filtered["Plant Name"].isin(plant)]
-    if salesman: df_filtered = df_filtered[df_filtered["Sales Man"].isin(salesman)]
-    if end_customer: df_filtered = df_filtered[df_filtered["End Customer Name"].isin(end_customer)]
-    num_days = max(1, (pd.to_datetime(end_date)-pd.to_datetime(start_date)).days + 1)
-
-    # =========================
-    # 1. Summary
-    # =========================
-    st.markdown("<h2>📊 Summary</h2>", unsafe_allow_html=True)
-    cols = st.columns(5)
-    with cols[0]: boxed_metric("Total Area", df_filtered["Area"].nunique())
-    with cols[1]: boxed_metric("Total Plant", df_filtered["Plant Name"].nunique())
-    with cols[2]: boxed_metric("Total Volume (Qty)", f"{df_filtered['Volume'].sum():,.2f}")
-    with cols[3]: boxed_metric("Total Ritase (DP No)", df_filtered["Ritase"].sum())
-    with cols[4]: boxed_metric("Truck Mixer", df_filtered["Truck No"].nunique())
-
-    # =========================
-    # 2. Volume Per Day
-    # =========================
-    st.markdown("<h2>📈 Volume Per Day</h2>", unsafe_allow_html=True)
-    vol_day = df_filtered.groupby("Dp Date")["Volume"].sum().reset_index()
-    fig_vol_day = px.line(vol_day, x="Dp Date", y="Volume", markers=True, text="Volume", title="Volume Per Day")
-    fig_vol_day.update_traces(textposition="top center", textfont=dict(size=11))
-    st.plotly_chart(styled_chart(fig_vol_day, height=400), use_container_width=True)
-
-    # =========================
-    # 3. Delivery Performance per Area & Plant
-    # =========================
-    st.markdown("<h2>🏭 Delivery Performance per Area & Plant</h2>", unsafe_allow_html=True)
-    col_area, col_plant = st.columns(2)
-    with col_area:
-        vol_area = df_filtered.groupby("Area")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        max_area = vol_area["Volume"].idxmax() if not vol_area.empty else 0
-        vol_area["Color"] = [highlight_color if i==max_area else color_palette[i%len(color_palette)] for i in range(len(vol_area))]
-        fig_area = px.bar(vol_area, x="Area", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
-                          title="Total Volume per Area (Highlight tertinggi)")
-        fig_area.update_traces(textposition="outside", cliponaxis=False)
-        st.plotly_chart(styled_chart(fig_area), use_container_width=True)
-    with col_plant:
-        vol_plant = df_filtered.groupby("Plant Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        max_plant = vol_plant["Volume"].idxmax() if not vol_plant.empty else 0
-        vol_plant["Color"] = [highlight_color if i==max_plant else color_palette[i%len(color_palette)] for i in range(len(vol_plant))]
-        fig_plant = px.bar(vol_plant, x="Plant Name", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
-                           title="Total Volume per Plant (Highlight tertinggi)")
-        fig_plant.update_traces(textposition="outside", cliponaxis=False)
-        st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
+    fig_delivery = px.line(delivery_perf, x="Tanggal Pengiriman", y=["Ritase", "Volume"],
+                           markers=True, title="Trend Delivery Performance",
+                           color_discrete_sequence=color_palette)
+    st.plotly_chart(fig_delivery, use_container_width=True)
 
     # =========================
     # 4. Truck Utilization
     # =========================
     st.markdown("<h2>🚛 Truck Utilization</h2>", unsafe_allow_html=True)
 
-    # Total Trip & Volume per Truck
     total_trip = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index(name="Total Trip")
     total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
-
-    # Merge keduanya
     truck_stats = pd.merge(total_trip, total_vol_truck, on="Truck No", how="outer")
 
-    # Hitung rata-rata (dibulatkan tanpa koma)
     truck_stats["Avg Trip per Truck (per Day)"] = (truck_stats["Total Trip"] / num_days).round(0).astype(int)
     truck_stats["Avg Load per Trip"] = (truck_stats["Total Volume"] / truck_stats["Total Trip"]).round(0).astype(int)
 
-    # Chart Total Trip per Truck
     fig_trip = px.bar(truck_stats, x="Truck No", y="Total Trip", text="Total Trip",
                       color="Truck No", color_discrete_sequence=color_palette,
                       title="Total Trip per Truck")
     fig_trip.update_traces(textposition="outside", cliponaxis=False)
-    st.plotly_chart(styled_chart(fig_trip), use_container_width=True)
+    st.plotly_chart(fig_trip, use_container_width=True)
 
-    # Chart Avg Trip per Truck (per Day)
     fig_avg_trip = px.bar(truck_stats, x="Truck No", y="Avg Trip per Truck (per Day)",
                           text="Avg Trip per Truck (per Day)", color="Truck No",
                           color_discrete_sequence=color_palette,
                           title=f"Avg Trip per Truck per Day (Total Trip ÷ {num_days} hari)")
     fig_avg_trip.update_traces(texttemplate="%{text:.0f}", textposition="outside", cliponaxis=False)
-    st.plotly_chart(styled_chart(fig_avg_trip), use_container_width=True)
+    st.plotly_chart(fig_avg_trip, use_container_width=True)
 
-    # Chart Avg Load per Trip
     fig_avg_load = px.bar(truck_stats, x="Truck No", y="Avg Load per Trip",
                           text="Avg Load per Trip", color="Truck No",
                           color_discrete_sequence=color_palette,
                           title="Avg Load per Trip (Total Volume ÷ Total Trip)")
     fig_avg_load.update_traces(texttemplate="%{text:.0f}", textposition="outside", cliponaxis=False)
-    st.plotly_chart(styled_chart(fig_avg_load), use_container_width=True)
+    st.plotly_chart(fig_avg_load, use_container_width=True)
 
     # =========================
     # 5. Distance Analysis
     # =========================
-    st.markdown("<h2>🗺️ Distance Analysis</h2>", unsafe_allow_html=True)
-    col_dist1, col_dist2 = st.columns(2)
-    with col_dist1:
-        avg_dist_plant = df_filtered.groupby("Plant Name")["Distance"].mean().reset_index()
-        fig_dist_plant = px.bar(avg_dist_plant, x="Plant Name", y="Distance", text="Distance", title="Avg Distance per Plant")
-        fig_dist_plant.update_traces(textposition="outside", cliponaxis=False)
-        st.plotly_chart(styled_chart(fig_dist_plant), use_container_width=True)
-    with col_dist2:
-        avg_dist_area = df_filtered.groupby("Area")["Distance"].mean().reset_index()
-        fig_dist_area = px.bar(avg_dist_area, x="Area", y="Distance", text="Distance", title="Avg Distance per Area")
-        fig_dist_area.update_traces(textposition="outside", cliponaxis=False)
-        st.plotly_chart(styled_chart(fig_dist_area), use_container_width=True)
+    st.markdown("<h2>📍 Distance Analysis</h2>", unsafe_allow_html=True)
+
+    dist_area = df_filtered.groupby("Area")["Distance"].sum().reset_index(name="Total Distance")
+    avg_dist_area = df_filtered.groupby("Area")["Distance"].mean().reset_index(name="Avg Distance")
+    avg_dist_area["Avg Distance"] = avg_dist_area["Avg Distance"].round(0).astype(int)
+
+    fig_total_dist = px.bar(dist_area, x="Area", y="Total Distance", text="Total Distance",
+                            color="Area", color_discrete_sequence=color_palette,
+                            title="Total Distance per Area")
+    fig_total_dist.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(fig_total_dist, use_container_width=True)
+
+    fig_avg_dist = px.bar(avg_dist_area, x="Area", y="Avg Distance", text="Avg Distance",
+                          color="Area", color_discrete_sequence=color_palette,
+                          title="Avg Distance per Area (per Trip)")
+    fig_avg_dist.update_traces(texttemplate="%{text:.0f}", textposition="outside", cliponaxis=False)
+    st.plotly_chart(fig_avg_dist, use_container_width=True)
 
     # =========================
     # 6. Sales & Customer Performance
     # =========================
-    st.markdown("<h2>💰 Sales & Customer Performance</h2>", unsafe_allow_html=True)
-    sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-    max_sales = sales_perf["Volume"].idxmax() if not sales_perf.empty else 0
-    sales_perf["Color"] = [highlight_color if i==max_sales else color_palette[i%len(color_palette)] for i in range(len(sales_perf))]
-    fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
-                       title="Volume per Sales (Highlight tertinggi)")
-    fig_sales.update_traces(textposition="outside", cliponaxis=False)
-    st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
+    st.markdown("<h2>🛒 Sales & Customer Performance</h2>", unsafe_allow_html=True)
 
-    cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-    max_cust = cust_perf["Volume"].idxmax() if not cust_perf.empty else 0
-    cust_perf["Color"] = [highlight_color if i==max_cust else color_palette[i%len(color_palette)] for i in range(len(cust_perf))]
-    fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
-                      title="Volume per End Customer (Highlight tertinggi)")
+    sales_perf = df_filtered.groupby("Salesman")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
+    fig_sales = px.bar(sales_perf, x="Salesman", y="Volume", text="Volume",
+                       color="Salesman", color_discrete_sequence=color_palette,
+                       title="Volume per Salesman")
+    fig_sales.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(fig_sales, use_container_width=True)
+
+    cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
+    fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume",
+                      color="End Customer Name", color_discrete_sequence=color_palette,
+                      title="Volume per Customer")
     fig_cust.update_traces(textposition="outside", cliponaxis=False)
-    st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
+    st.plotly_chart(fig_cust, use_container_width=True)
