@@ -1,3 +1,15 @@
+from datetime import datetime
+
+# Ambil tanggal & waktu sekarang
+now = datetime.now()
+
+# Format default (YYYY-MM-DD HH:MM)
+print("Sekarang:", now)
+
+# Format custom misalnya: DD/MM/YYYY HH:MM:SS
+print("Format custom:", now.strftime("%d/%m/%Y %H:%M:%S"))
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
