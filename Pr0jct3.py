@@ -214,10 +214,17 @@ if uploaded_file:
     # =========================
     # 6. Sales & Customer Performance
     # =========================
-    st.markdown("<hr><h2>👤 Sales & Customer Performance</h2>", unsafe_allow_html=True)
     sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-    fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Sales Man",
-                       color_discrete_sequence=color_palette, title="Volume per Sales")
+
+    fig_sales = px.bar(
+        sales_perf,
+        x="Sales Man",
+        y="Volume",
+        text="Volume",
+        color="Sales Man",
+        color_discrete_sequence=color_palette,
+        title="Volume per Sales"
+    )
     fig_sales.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
 
