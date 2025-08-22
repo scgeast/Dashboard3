@@ -146,37 +146,46 @@ if uploaded_file:
         st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
 
     # =========================
-    # 4. Truck Utilization
+    # Truck Utilization
     # =========================
-    st.markdown("<hr><h2>🚛 Truck Utilization</h2>", unsafe_allow_html=True)
 
     # Total Trip per Truck (Ritase = DP No)
     total_trip = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index(name="Total Trip")
-    fig_total_trip = px.bar(total_trip, x="Truck No", y="Total Trip", text="Total Trip", color="Truck No",
-                            color_discrete_sequence=color_palette, title="Total Trip per Truck")
+    fig_total_trip = px.bar(
+        total_trip,
+        x="Truck No",
+        y="Total Trip",
+        text="Total Trip",
+        color="Truck No",
+        color_discrete_sequence=color_palette,
+        title="Total Trip per Truck"
+    )
     fig_total_trip.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_total_trip), use_container_width=True)
 
-    # Avg Trip per Truck (per day) = Total Trip / jumlah hari filter
-    avg_trip = total_trip.copy()
-    avg_trip["Avg Trip per Truck"] = avg_trip["Total Trip"] / num_days
-    fig_avg_trip = px.bar(avg_trip, x="Truck No", y="Avg Trip per Truck", text="Avg Trip per Truck",
-                          color="Truck No", color_discrete_sequence=color_palette, title="Avg Trip per Truck (per Day)")
+    # Avg Trip per Truck (per day) = Total Trip ÷ jumlah hari filter
+    total_trip["Avg Trip per Truck"] = total_trip["Total Trip"] / num_days
+    fig_avg_trip = px.bar(
+        total_trip,
+        x="Truck No",
+        y="Avg Trip per Truck",
+        text="Avg Trip per Truck",
+        color="Truck No",
+        color_discrete_sequence=color_palette,
+        title="Avg Trip per Truck (per Day)"
+    )
     fig_avg_trip.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_avg_trip), use_container_width=True)
 
-    # Total Volume per Truck
+    # Avg Load per Trip = Total Volume per Truck ÷ jumlah hari filter
     total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
-
-    # Avg Load per Trip = Total Volume per Truck / jumlah hari filter
-    avg_load = total_vol_truck.copy()
-    avg_load["Avg Load per Trip"] = avg_load["Total Volume"] / num_days
+    total_vol_truck["Avg Load per Trip"] = total_vol_truck["Total Volume"] / num_days
 
     fig_avg_load = px.bar(
-        avg_load,
+        total_vol_truck,
         x="Truck No",
         y="Avg Load per Trip",
-        text="Avg Load per Trip",
+          text="Avg Load per Trip",
         color="Truck No",
         color_discrete_sequence=color_palette,
         title="Avg Load per Trip"
