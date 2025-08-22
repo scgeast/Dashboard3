@@ -251,7 +251,7 @@ kpis = [
     ("🏭 Total Plant", fmt0(tot_plant)),
     ("📦 Total Volume", fmt0(round(tot_vol))),
     ("🚛 Total Truck", fmt0(tot_truck)),
-    ("🧾 Total Trip per Truck", fmt0(total_trip)),
+    ("🧾 Total Trip", fmt0(total_trip)),
     ("⚖️ Avg Load per Trip", fmt2(avg_load_trip)),
 ]
 
