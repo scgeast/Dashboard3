@@ -25,17 +25,17 @@ h1,h2,h3,h4 {{color: {font_color}; text-shadow:0 0 10px {font_color};}}
 .metric-label {{font-weight:700;font-size:1.2rem;margin-bottom:8px;color:{font_color};}}
 .metric-value {{font-size:2rem;font-weight:900;color:{font_color};text-shadow:0 0 5px #00FFFF;}}
 div.stButton>button {{background-color:{font_color} !important;color:{bg_color} !important;font-weight:700;border-radius:10px;box-shadow:0 0 10px {font_color};}}
-    div.stButton>button:hover {{background-color:#FF00FF !important;color:white !important;box-shadow:0 0 20px #FF00FF;}}
-    </style>
-    """, unsafe_allow_html=True)
+div.stButton>button:hover {{background-color:#FF00FF !important;color:white !important;box-shadow:0 0 20px #FF00FF;}}
+</style>
+""", unsafe_allow_html=True)
 
-    st.markdown("<h1 style='text-align:center;'>📦 Dashboard Analyst Delivery & Sales</h1>", unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("📂 Upload file Excel (5MB–30MB)", type=["xlsx","xls"])
+st.markdown("<h1 style='text-align:center;'>📦 Dashboard Analyst Delivery & Sales</h1>", unsafe_allow_html=True)
+uploaded_file = st.file_uploader("📂 Upload file Excel (5MB–30MB)", type=["xlsx","xls"])
 
-    # =========================
-    # Fungsi chart & metric
-    # =========================
-    def styled_chart(fig, height=None, font_size=12, margin=None, text_position="outside", show_legend=False, title_font_size=18):
+# =========================
+# Fungsi chart & metric
+# =========================
+def styled_chart(fig, height=None, font_size=12, margin=None, text_position="outside", show_legend=False, title_font_size=18):
     fig.update_layout(plot_bgcolor=box_bg, paper_bgcolor=box_bg, font=dict(color=font_color,size=font_size),
                       title_font=dict(color=font_color,size=title_font_size),
                       xaxis=dict(tickangle=45, gridcolor='#222244'),
@@ -46,21 +46,18 @@ div.stButton>button {{background-color:{font_color} !important;color:{bg_color} 
     except: pass
     return fig
 
-    def boxed_metric(label,value):
+def boxed_metric(label,value):
     st.markdown(f"<div class='metric-box'><div class='metric-label'>{label}</div><div class='metric-value'>{value}</div></div>", unsafe_allow_html=True)
 
-    # =========================
-    # MAIN
-    # =========================
-    if uploaded_file:
+# =========================
+# MAIN
+# =========================
+if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df.columns = df.columns.str.strip().str.replace("\n","").str.replace("\r","")
+    st.write("Kolom yang ada di file:", df.columns.tolist())
 
-    st.write("Kolom yang ada di file:", df.columns.tolist())  # Debug kolom
-
-    # =========================
     # Mapping kolom utama
-    # =========================
     mapping = {
         "Dp Date":["Tanggal P","Dp Date","Delivery Date","DP Date"],
         "Sales Man":["Salesman","Sales Man"],
@@ -75,9 +72,7 @@ div.stButton>button {{background-color:{font_color} !important;color:{bg_color} 
         if found: df.rename(columns={found:target}, inplace=True)
         else: df[target] = "Unknown"
 
-    # =========================
-    # Volume dari kolom Qty
-    # =========================
+    # Volume dari Qty
     qty_col = next((c for c in df.columns if c.lower()=="qty"), None)
     if not qty_col:
         st.error("File harus punya kolom Qty untuk menghitung Volume / Load.")
@@ -85,17 +80,15 @@ div.stButton>button {{background-color:{font_color} !important;color:{bg_color} 
     df.rename(columns={qty_col:"Qty"}, inplace=True)
     df["Volume"] = pd.to_numeric(df["Qty"], errors="coerce").fillna(0)
 
-    # =========================
-    # Ritase / Trip dari kolom Dp No
-    # =========================
+    # Ritase / Trip dari Dp No
     dpno_col = next((c for c in df.columns if c.lower()=="dp no"), None)
     if not dpno_col:
         st.error("File harus punya kolom Dp No untuk menghitung Ritase / Trip.")
         st.stop()
     df.rename(columns={dpno_col:"Dp No"}, inplace=True)
-    df["Ritase"] = pd.to_numeric(df["Dp No"], errors="coerce").fillna(0)
+    df["Ritase"] = 1  # setiap DP dihitung 1 trip
 
-    # Distance numeric
+    # Distance & Date
     if "Distance" not in df.columns: df["Distance"] = 0
     df["Distance"] = pd.to_numeric(df["Distance"], errors="coerce").fillna(0)
     df["Dp Date"] = pd.to_datetime(df["Dp Date"], errors='coerce')
@@ -146,17 +139,15 @@ div.stButton>button {{background-color:{font_color} !important;color:{bg_color} 
     col_area, col_plant = st.columns(2)
     with col_area:
         vol_area = df_filtered.groupby("Area")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        max_area = vol_area["Volume"].idxmax() if not vol_area.empty else 0
-        vol_area["Color"] = [highlight_color if i==max_area else color_palette[i%len(color_palette)] for i in range(len(vol_area))]
-        fig_area = px.bar(vol_area, x="Area", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
+        color_map_area = {vol_area.loc[i,"Area"]: highlight_color if i==0 else color_palette[i%len(color_palette)] for i in range(len(vol_area))}
+        fig_area = px.bar(vol_area, x="Area", y="Volume", text="Volume", color="Area", color_discrete_map=color_map_area,
                           title="Total Volume per Area (Highlight tertinggi)")
         fig_area.update_traces(textposition="outside", cliponaxis=False)
         st.plotly_chart(styled_chart(fig_area), use_container_width=True)
     with col_plant:
         vol_plant = df_filtered.groupby("Plant Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        max_plant = vol_plant["Volume"].idxmax() if not vol_plant.empty else 0
-        vol_plant["Color"] = [highlight_color if i==max_plant else color_palette[i%len(color_palette)] for i in range(len(vol_plant))]
-        fig_plant = px.bar(vol_plant, x="Plant Name", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
+        color_map_plant = {vol_plant.loc[i,"Plant Name"]: highlight_color if i==0 else color_palette[i%len(color_palette)] for i in range(len(vol_plant))}
+        fig_plant = px.bar(vol_plant, x="Plant Name", y="Volume", text="Volume", color="Plant Name", color_discrete_map=color_map_plant,
                            title="Total Volume per Plant (Highlight tertinggi)")
         fig_plant.update_traces(textposition="outside", cliponaxis=False)
         st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
@@ -168,7 +159,7 @@ div.stButton>button {{background-color:{font_color} !important;color:{bg_color} 
     total_trip = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index(name="Total Trip")
     total_trip["Avg Trip per Truck"] = total_trip["Total Trip"] / num_days
     total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
-    total_vol_truck["Avg Load per Trip"] = total_vol_truck["Total Volume"] / num_days
+    total_vol_truck["Avg Load per Trip"] = total_vol_truck["Total Volume"] / total_trip["Total Trip"]
 
     st.plotly_chart(styled_chart(px.bar(total_trip, x="Truck No", y="Total Trip", text="Total Trip",
                                         color="Truck No", color_discrete_sequence=color_palette,
@@ -178,41 +169,42 @@ div.stButton>button {{background-color:{font_color} !important;color:{bg_color} 
                                         title="Avg Trip per Truck (per Day)").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
     st.plotly_chart(styled_chart(px.bar(total_vol_truck, x="Truck No", y="Avg Load per Trip", text="Avg Load per Trip",
                                         color="Truck No", color_discrete_sequence=color_palette,
-                                        title=f"Avg Load per Truck per Day (Qty ÷ {num_days} hari)").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
+                                        title=f"Avg Load per Truck per Trip").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
 
     # =========================
-    # 5. Distance Analysis
-    # =========================
-    col_dist1, col_dist2 = st.columns(2)
-    with col_dist1:
-        avg_dist_plant = df_filtered.groupby("Plant Name")["Distance"].mean().reset_index()
-        fig_dist_plant = px.bar(avg_dist_plant, x="Plant Name", y="Distance", text="Distance", title="Avg Distance per Plant")
-        fig_dist_plant.update_traces(textposition="outside", cliponaxis=False)
-        st.plotly_chart(styled_chart(fig_dist_plant), use_container_width=True)
-    with col_dist2:
-        avg_dist_area = df_filtered.groupby("Area")["Distance"].mean().reset_index()
-        fig_dist_area = px.bar(avg_dist_area, x="Area", y="Distance", text="Distance", title="Avg Distance per Area")
-        fig_dist_area.update_traces(textposition="outside", cliponaxis=False)
-        st.plotly_chart(styled_chart(fig_dist_area), use_container_width=True)
-
-    # =========================
-    # 6. Sales & Customer Performance
+    # 5. Sales & Customer Performance
     # =========================
     sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-    max_sales = sales_perf["Volume"].idxmax() if not sales_perf.empty else 0
-    sales_perf["Color"] = [highlight_color if i==max_sales else color_palette[i%len(color_palette)] for i in range(len(sales_perf))]
-    fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
+    color_map_sales = {sales_perf.loc[i,"Sales Man"]: highlight_color if i==0 else color_palette[i%len(color_palette)] for i in range(len(sales_perf))}
+    fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Sales Man", color_discrete_map=color_map_sales,
                        title="Volume per Sales (Highlight tertinggi)")
     fig_sales.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
 
     cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-    max_cust = cust_perf["Volume"].idxmax() if not cust_perf.empty else 0
-    cust_perf["Color"] = [highlight_color if i==max_cust else color_palette[i%len(color_palette)] for i in range(len(cust_perf))]
-    fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
+    color_map_cust = {cust_perf.loc[i,"End Customer Name"]: highlight_color if i==0 else color_palette[i%len(color_palette)] for i in range(len(cust_perf))}
+    fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="End Customer Name", color_discrete_map=color_map_cust,
                       title="Volume per End Customer (Highlight tertinggi)")
     fig_cust.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
+
+    # =========================
+    # 6. Distance Analysis
+    # =========================
+    st.markdown("<hr><h2>📍 Distance Analysis</h2>", unsafe_allow_html=True)
+    col_dist1, col_dist2 = st.columns(2)
+    with col_dist1:
+    avg_dist_plant = df_filtered.groupby("Plant Name")["Distance"].mean().reset_index()
+    fig_dist_plant = px.bar(avg_dist_plant, x="Plant Name", y="Distance", text="Distance",
+                            title="Avg Distance per Plant")
+    fig_dist_plant.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_dist_plant), use_container_width=True)
+    with col_dist2:
+    avg_dist_area = df_filtered.groupby("Area")["Distance"].mean().reset_index()
+    fig_dist_area = px.bar(avg_dist_area, x="Area", y="Distance", text="Distance",
+                           title="Avg Distance per Area")
+    fig_dist_area.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_dist_area), use_container_width=True)
 
 else:
     st.info("📤 Silakan upload file Excel terlebih dahulu untuk menampilkan dashboard.")
