@@ -30,7 +30,6 @@ div.stButton>button:hover {{background-color:#FF00FF !important;color:white !imp
 """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center;'>📦 Dashboard Analyst Delivery & Sales</h1>", unsafe_allow_html=True)
-
 uploaded_file = st.file_uploader("📂 Upload file Excel (5MB–30MB)", type=["xlsx","xls"])
 
 # =========================
@@ -75,20 +74,20 @@ if uploaded_file:
         else: df[target] = "Unknown"
 
     # =========================
-    # Volume dari kolom Qty
+    # Volume dari kolom Qty/Volume/Load
     # =========================
-    qty_cols = [c for c in df.columns if "Qty" in c.strip()]
+    qty_cols = [c for c in df.columns if "qty" in c.lower() or "volume" in c.lower() or "load" in c.lower()]
     if not qty_cols:
-        st.error("File harus punya kolom Qty untuk menghitung Volume / Load.")
+        st.error("File harus punya kolom Qty/Volume/Load untuk menghitung Volume / Load.")
         st.stop()
     df["Volume"] = pd.to_numeric(df[qty_cols[0]], errors="coerce").fillna(0)
 
     # =========================
-    # Ritase / Trip dari kolom Dp No
+    # Ritase / Trip dari kolom Dp No/Trip/Ritase
     # =========================
-    dpno_cols = [c for c in df.columns if "Dp No" in c.strip()]
+    dpno_cols = [c for c in df.columns if "dp no" in c.lower() or "trip" in c.lower() or "ritase" in c.lower()]
     if not dpno_cols:
-        st.error("File harus punya kolom Dp No untuk menghitung Ritase / Trip.")
+        st.error("File harus punya kolom Dp No/Trip/Ritase untuk menghitung Ritase / Trip.")
         st.stop()
     df["Ritase"] = pd.to_numeric(df[dpno_cols[0]], errors="coerce").fillna(0)
 
@@ -138,7 +137,7 @@ if uploaded_file:
     st.plotly_chart(styled_chart(fig_vol_day, height=400), use_container_width=True)
 
     # =========================
-    # 3. Delivery Performance (Area & Plant dengan volume terbesar)
+    # 3. Delivery Performance
     # =========================
     col_area, col_plant = st.columns(2)
     with col_area:
@@ -166,6 +165,7 @@ if uploaded_file:
     total_trip["Avg Trip per Truck"] = total_trip["Total Trip"]/num_days
     total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
     total_vol_truck["Avg Load per Trip"] = total_vol_truck["Total Volume"]/num_days
+
     st.plotly_chart(styled_chart(px.bar(total_trip, x="Truck No", y="Total Trip", text="Total Trip",
                                         color="Truck No", color_discrete_sequence=color_palette,
                                         title="Total Trip per Truck").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
