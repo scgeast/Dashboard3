@@ -53,18 +53,14 @@ def boxed_metric(label,value):
 # MAIN
 # =========================
 if uploaded_file:
-    # Coba baca header baris 0-3 jika header asli ada di baris kedua atau ketiga
-    for header_row in range(4):
-        df = pd.read_excel(uploaded_file, header=header_row)
-        df.columns = df.columns.str.strip().str.replace("\n","").str.replace("\r","")
-        if any('Qty' in str(c) for c in df.columns) and any('Dp No' in str(c) for c in df.columns):
-            break  # ketemu header yang benar
-
+    df = pd.read_excel(uploaded_file)
+    df.columns = df.columns.str.strip().str.replace("\n","").str.replace("\r","")
     st.write("Kolom yang ada di file:", df.columns.tolist())  # Debug kolom
 
+    # =========================
     # Mapping kolom utama
+    # =========================
     mapping = {
-        "Dp Date":["Tanggal P","Dp Date","Delivery Date","DP Date"],
         "Sales Man":["Salesman","Sales Man"],
         "Area":["Area","Region"],
         "Plant Name":["Plant Name","Plant"],
@@ -77,28 +73,43 @@ if uploaded_file:
         if found: df.rename(columns={found:target}, inplace=True)
         else: df[target] = "Unknown"
 
-    # Volume dari kolom Qty
-    qty_col = next((c for c in df.columns if "qty" in c.lower()), None)
+    # =========================
+    # Deteksi kolom tanggal
+    # =========================
+    date_col = next((c for c in df.columns if c and "date" in str(c).lower()), None)
+    if not date_col:
+        st.error("File harus punya kolom tanggal pengiriman (Dp Date).")
+        st.stop()
+    df.rename(columns={date_col:"Dp Date"}, inplace=True)
+    df["Dp Date"] = pd.to_datetime(df["Dp Date"], errors='coerce')
+
+    # =========================
+    # Deteksi Qty
+    # =========================
+    qty_col = next((c for c in df.columns if c and "qty" in str(c).lower()), None)
     if not qty_col:
         st.error("File harus punya kolom Qty untuk menghitung Volume / Load.")
         st.stop()
     df.rename(columns={qty_col:"Qty"}, inplace=True)
     df["Volume"] = pd.to_numeric(df["Qty"], errors="coerce").fillna(0)
 
-    # Ritase / Trip dari kolom Dp No
-    dpno_col = next((c for c in df.columns if "dp no" in c.lower()), None)
+    # =========================
+    # Deteksi DP No / Ritase
+    # =========================
+    dpno_col = next((c for c in df.columns if c and "dp" in str(c).lower()), None)
     if not dpno_col:
         st.error("File harus punya kolom Dp No untuk menghitung Ritase / Trip.")
         st.stop()
     df.rename(columns={dpno_col:"Dp No"}, inplace=True)
-    df["Ritase"] = pd.to_numeric(df["Dp No"], errors="coerce").fillna(0)
+    df["Ritase"] = 1  # setiap baris = 1 trip
 
     # Distance numeric
     if "Distance" not in df.columns: df["Distance"] = 0
     df["Distance"] = pd.to_numeric(df["Distance"], errors="coerce").fillna(0)
-    df["Dp Date"] = pd.to_datetime(df["Dp Date"], errors='coerce')
 
+    # =========================
     # Sidebar Filter
+    # =========================
     st.sidebar.header("🔎 Filter Data")
     start_date = st.sidebar.date_input("Start Date", df["Dp Date"].min())
     end_date = st.sidebar.date_input("End Date", df["Dp Date"].max())
