@@ -45,7 +45,7 @@ def styled_chart(fig, height=None, font_size=12, margin=None, text_format=".2f",
                       yaxis=dict(gridcolor='#222244'), showlegend=show_legend)
     if height: fig.update_layout(height=height)
     if margin: fig.update_layout(margin=margin)
-    try: fig.update_traces(texttemplate=f"%{{text:{text_format}}}", textposition=text_position)
+    try: fig.update_traces(texttemplate=f"%{{text:{text_format}}}", textposition=text_position, cliponaxis=False)
     except: pass
     return fig
 
@@ -131,38 +131,36 @@ if uploaded_file:
         vol_area = df_filtered.groupby("Area")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
         fig_area = px.bar(vol_area, x="Area", y="Volume", text="Volume", color="Area",
                           color_discrete_sequence=color_palette, title="Total Volume per Area")
-        fig_area.update_traces(textposition="outside")
+        fig_area.update_traces(textposition="outside", cliponaxis=False)
         st.plotly_chart(styled_chart(fig_area), use_container_width=True)
     with col_plant:
         vol_plant = df_filtered.groupby("Plant Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
         fig_plant = px.bar(vol_plant, x="Plant Name", y="Volume", text="Volume", color="Plant Name",
                            color_discrete_sequence=color_palette, title="Total Volume per Plant")
-        fig_plant.update_traces(textposition="outside")
+        fig_plant.update_traces(textposition="outside", cliponaxis=False)
         st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
 
     # =========================
-    # 4. Truck Utilization
+    # 4. Truck Utilization (FULL WIDTH)
     # =========================
-    st.subheader("🚛 Truck Utilization")
-    col_trip, col_avg_trip, col_avg_load = st.columns(3)
-    with col_trip:
-        ritase_truck = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index().sort_values("Ritase", ascending=False)
-        fig_rit = px.bar(ritase_truck, x="Truck No", y="Ritase", text="Ritase", color="Truck No",
-                         color_discrete_sequence=color_palette, title="Total Trip per Truck")
-        fig_rit.update_traces(textposition="outside")
-        st.plotly_chart(styled_chart(fig_rit), use_container_width=True)
-    with col_avg_trip:
-        avg_rit = df_filtered.groupby("Truck No")["Ritase"].mean().reset_index()
-        fig_avg_rit = px.bar(avg_rit, x="Truck No", y="Ritase", text="Ritase", color="Truck No",
-                             color_discrete_sequence=color_palette, title="Avg Trip per Truck")
-        fig_avg_rit.update_traces(textposition="outside")
-        st.plotly_chart(styled_chart(fig_avg_rit), use_container_width=True)
-    with col_avg_load:
-        avg_load = df_filtered.groupby("Truck No")["Volume"].mean().reset_index()
-        fig_avg_load = px.bar(avg_load, x="Truck No", y="Volume", text="Volume", color="Truck No",
-                              color_discrete_sequence=color_palette, title="Avg Load per Trip")
-        fig_avg_load.update_traces(textposition="outside")
-        st.plotly_chart(styled_chart(fig_avg_load), use_container_width=True)
+    st.markdown("<hr><h2>🚛 Truck Utilization</h2>", unsafe_allow_html=True)
+    ritase_truck = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index().sort_values("Ritase", ascending=False)
+    fig_rit = px.bar(ritase_truck, x="Truck No", y="Ritase", text="Ritase", color="Truck No",
+                     color_discrete_sequence=color_palette, title="Total Trip per Truck")
+    fig_rit.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_rit), use_container_width=True)
+
+    avg_rit = df_filtered.groupby("Truck No")["Ritase"].mean().reset_index()
+    fig_avg_rit = px.bar(avg_rit, x="Truck No", y="Ritase", text="Ritase", color="Truck No",
+                         color_discrete_sequence=color_palette, title="Avg Trip per Truck")
+    fig_avg_rit.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_avg_rit), use_container_width=True)
+
+    avg_load = df_filtered.groupby("Truck No")["Volume"].mean().reset_index()
+    fig_avg_load = px.bar(avg_load, x="Truck No", y="Volume", text="Volume", color="Truck No",
+                          color_discrete_sequence=color_palette, title="Avg Load per Trip")
+    fig_avg_load.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_avg_load), use_container_width=True)
 
     # =========================
     # 5. Distance Analysis
@@ -173,36 +171,33 @@ if uploaded_file:
         avg_dist_plant = df_filtered.groupby("Plant Name")["Distance"].mean().reset_index()
         fig_dist_plant = px.bar(avg_dist_plant, x="Plant Name", y="Distance", text="Distance",
                                 title="Avg Distance per Plant")
-        fig_dist_plant.update_traces(textposition="outside")
+        fig_dist_plant.update_traces(textposition="outside", cliponaxis=False)
         st.plotly_chart(styled_chart(fig_dist_plant), use_container_width=True)
     with col_dist_area:
         avg_dist_area = df_filtered.groupby("Area")["Distance"].mean().reset_index()
         fig_dist_area = px.bar(avg_dist_area, x="Area", y="Distance", text="Distance",
                                title="Avg Distance per Area")
-        fig_dist_area.update_traces(textposition="outside")
+        fig_dist_area.update_traces(textposition="outside", cliponaxis=False)
         st.plotly_chart(styled_chart(fig_dist_area), use_container_width=True)
 
     # =========================
-    # 6. Sales & Customer Performance
+    # 6. Sales & Customer Performance (FULL WIDTH)
     # =========================
-    st.subheader("👤 Sales & Customer Performance")
-    col_sales, col_cust = st.columns(2)
-    with col_sales:
-        sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Sales Man",
-                           color_discrete_sequence=color_palette, title="Volume per Sales")
-        fig_sales.update_traces(textposition="outside")
-        st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
-    with col_cust:
-        # cek apakah ada data sebelum plot
-        cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        if not cust_perf.empty:
-            fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="End Customer Name",
-                              color_discrete_sequence=color_palette, title="Volume per End Customer Name")
-            fig_cust.update_traces(textposition="outside")
-            st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
-        else:
-            st.info("No data available for End Customer Name")
+    st.markdown("<hr><h2>👤 Sales & Customer Performance</h2>", unsafe_allow_html=True)
+    sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+    fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Sales Man",
+                       color_discrete_sequence=color_palette, title="Volume per Sales")
+    fig_sales.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
+
+    cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+    if not cust_perf.empty:
+        fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="End Customer Name",
+                          color_discrete_sequence=color_palette, title="Volume per End Customer Name")
+        fig_cust.update_traces(textposition="outside", cliponaxis=False)
+        st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
+    else:
+        st.info("No data available for End Customer Name")
 
 else:
     st.info("📤 Silakan upload file Excel terlebih dahulu untuk menampilkan dashboard.")
