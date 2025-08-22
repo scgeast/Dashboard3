@@ -165,11 +165,10 @@ if uploaded_file:
     fig_avg_rit.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_avg_rit), use_container_width=True)
 
-    # Avg Load per Trip (per hari)
-    avg_load = df_filtered.groupby("Truck No")["Volume"].sum().reset_index()
-    avg_load["Avg Load per Trip"] = avg_load["Volume"] / num_days
+    # Avg Load per Trip (rata-rata Volume per Truck)
+    avg_load = df_filtered.groupby("Truck No")["Volume"].mean().reset_index(name="Avg Load per Trip")
     fig_avg_load = px.bar(avg_load, x="Truck No", y="Avg Load per Trip", text="Avg Load per Trip",
-                          color="Truck No", color_discrete_sequence=color_palette, title="Avg Load per Trip (per Day)")
+                          color="Truck No", color_discrete_sequence=color_palette, title="Avg Load per Trip")
     fig_avg_load.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_avg_load), use_container_width=True)
 
