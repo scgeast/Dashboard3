@@ -8,183 +8,147 @@ import plotly.express as px
 st.set_page_config(page_title="📦 Dashboard Analyst Delivery & Sales", layout="wide")
 
 # =========================
-# CSS Custom
-# =========================
-st.markdown("""
-    <style>
-    .main {
-        background-color: #0e1117;
-        color: #fafafa;
-    }
-    h1, h2, h3, h4 {
-        color: #00FFAA !important;
-        text-shadow: 0 0 10px #00FFAA;
-    }
-    .metric-box {
-        padding: 15px;
-        border-radius: 12px;
-        background: #1e1e1e;
-        color: white;
-        box-shadow: 0 0 15px rgba(0,255,170,0.4);
-        text-align: center;
-        margin: 5px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# =========================
 # Upload File
 # =========================
-st.sidebar.header("📂 Upload Data")
-uploaded_file = st.sidebar.file_uploader("Upload file Excel", type=["xlsx"])
+st.sidebar.header("📂 Upload File Excel")
+file = st.sidebar.file_uploader("Upload file Excel", type=["xlsx"])
 
-if uploaded_file:
-    df = pd.read_excel(uploaded_file)
+# =========================
+# Fungsi Normalisasi Nama Kolom
+# =========================
+def normalize_columns(df):
+    mapping = {
+        "dp date": ["tanggal pengiriman", "delivery date", "dp date"],
+        "qty": ["qty", "volume"],
+        "sales man": ["sales man", "salesman", "sales name"],
+        "dp no": ["dp no", "trip", "ritase"],
+        "truck no": ["truck no", "truck"],
+        "end customer name": ["end customer name", "customer", "customer name"],
+        "area": ["area"],
+        "plant": ["plant"],
+        "distance": ["distance", "jarak"]
+    }
 
-    # Pastikan kolom yang dibutuhkan ada
-    required_columns = ["Dp Date", "Salesman Name", "End Customer Name", "Truck No", "DP No", "Qty"]
-    missing = [col for col in required_columns if col not in df.columns]
+    col_map = {}
+    for std_col, variants in mapping.items():
+        for v in variants:
+            for col in df.columns:
+                if col.strip().lower() == v.strip().lower():
+                    col_map[col] = std_col
+    return df.rename(columns=col_map)
+
+# =========================
+# Load Data
+# =========================
+if file:
+    df = pd.read_excel(file)
+    df = normalize_columns(df)
+
+    # pastikan kolom wajib ada
+    required = ["dp date", "qty", "sales man", "dp no"]
+    missing = [col for col in required if col not in df.columns]
     if missing:
-        st.error("❌ File tidak sesuai format. Kolom hilang: " + ", ".join(missing))
-    else:
-        # =========================
-        # Persiapan Data
-        # =========================
-        df["Dp Date"] = pd.to_datetime(df["Dp Date"])
-        df["Ritase"] = 1  # DP No dianggap 1 trip
+        st.error(f"❌ File tidak sesuai format. Kolom hilang: {', '.join(missing)}")
+        st.stop()
 
-        # Filter tanggal
-        start_date = st.sidebar.date_input("Start Date", df["Dp Date"].min())
-        end_date = st.sidebar.date_input("End Date", df["Dp Date"].max())
-        df_filtered = df[(df["Dp Date"] >= pd.to_datetime(start_date)) & 
-                         (df["Dp Date"] <= pd.to_datetime(end_date))]
+    # ubah tipe data tanggal
+    df["dp date"] = pd.to_datetime(df["dp date"], errors="coerce")
 
-        # Filter tambahan
-        area_filter = st.sidebar.multiselect("Pilih Area", df_filtered["Area"].unique() if "Area" in df_filtered.columns else [])
+    # =========================
+    # Filter Sidebar
+    # =========================
+    start_date = st.sidebar.date_input("Start Date", df["dp date"].min())
+    end_date = st.sidebar.date_input("End Date", df["dp date"].max())
+    df_filtered = df[(df["dp date"] >= pd.to_datetime(start_date)) & 
+                     (df["dp date"] <= pd.to_datetime(end_date))]
+
+    if "area" in df.columns:
+        area_filter = st.sidebar.multiselect("Filter Area", df["area"].unique())
         if area_filter:
-            df_filtered = df_filtered[df_filtered["Area"].isin(area_filter)]
+            df_filtered = df_filtered[df_filtered["area"].isin(area_filter)]
 
-        plant_filter = st.sidebar.multiselect("Pilih Plant", df_filtered["Plant"].unique() if "Plant" in df_filtered.columns else [])
+    if "plant" in df.columns:
+        plant_filter = st.sidebar.multiselect("Filter Plant", df["plant"].unique())
         if plant_filter:
-            df_filtered = df_filtered[df_filtered["Plant"].isin(plant_filter)]
+            df_filtered = df_filtered[df_filtered["plant"].isin(plant_filter)]
 
-        sales_filter = st.sidebar.multiselect("Pilih Salesman", df_filtered["Salesman Name"].unique())
-        if sales_filter:
-            df_filtered = df_filtered[df_filtered["Salesman Name"].isin(sales_filter)]
+    # =========================
+    # Summary Metrics
+    # =========================
+    total_volume = df_filtered["qty"].sum()
+    total_trip = df_filtered["dp no"].count()
+    total_truck = df_filtered["truck no"].nunique() if "truck no" in df_filtered.columns else 1
+    total_days = df_filtered["dp date"].nunique()
 
-        cust_filter = st.sidebar.multiselect("Pilih Customer", df_filtered["End Customer Name"].unique())
-        if cust_filter:
-            df_filtered = df_filtered[df_filtered["End Customer Name"].isin(cust_filter)]
+    avg_load_per_day = total_volume / total_days if total_days > 0 else 0
+    avg_trip_per_truck = total_trip / total_truck if total_truck > 0 else 0
+    volume_per_day = total_volume / total_days if total_days > 0 else 0
+    trip_per_day = total_trip / total_days if total_days > 0 else 0
 
-        # =========================
-        # Header
-        # =========================
-        st.title("📦 Dashboard Analyst Delivery & Sales")
+    st.markdown("## 📊 Summarize")
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1.metric("Total Volume", f"{total_volume:,.0f}")
+    col2.metric("Total Ritase", f"{total_trip:,.0f}")
+    col3.metric("Avg Load / Day", f"{avg_load_per_day:,.2f}")
+    col4.metric("Avg Trip / Truck", f"{avg_trip_per_truck:,.2f}")
+    col5.metric("Volume / Day", f"{volume_per_day:,.2f}")
+    col6.metric("Trip / Day", f"{trip_per_day:,.2f}")
 
-        # =========================
-        # Summary
-        # =========================
-        st.subheader("📋 Summarize")
-        total_trip = df_filtered["Ritase"].sum()
-        total_volume = df_filtered["Qty"].sum()
-        total_salesman = df_filtered["Salesman Name"].nunique()
-        total_customer = df_filtered["End Customer Name"].nunique()
-        total_truck = df_filtered["Truck No"].nunique()
+    # =========================
+    # Delivery Performance
+    # =========================
+    st.subheader("🚚 Delivery Performance")
+    delivery = df_filtered.groupby("dp date").agg(
+        Ritase=("dp no", "count"),
+        Volume=("qty", "sum")
+    ).reset_index()
 
-        col1, col2, col3, col4, col5 = st.columns(5)
-        with col1:
-            st.markdown(f"<div class='metric-box'>🚚<br>Total Ritase<br><b>{total_trip}</b></div>", unsafe_allow_html=True)
-        with col2:
-            st.markdown(f"<div class='metric-box'>📦<br>Total Volume<br><b>{total_volume}</b></div>", unsafe_allow_html=True)
-        with col3:
-            st.markdown(f"<div class='metric-box'>👨‍💼<br>Salesman<br><b>{total_salesman}</b></div>", unsafe_allow_html=True)
-        with col4:
-            st.markdown(f"<div class='metric-box'>🏬<br>Customer<br><b>{total_customer}</b></div>", unsafe_allow_html=True)
-        with col5:
-            st.markdown(f"<div class='metric-box'>🚛<br>Truck<br><b>{total_truck}</b></div>", unsafe_allow_html=True)
+    fig_delivery = px.bar(delivery, x="dp date", y=["Ritase", "Volume"], barmode="group", title="Delivery Performance")
+    st.plotly_chart(fig_delivery, use_container_width=True)
 
-        # =========================
-        # 1. Delivery Performance
-        # =========================
-        st.subheader("🚚 Delivery Performance")
-        delivery = df_filtered.groupby("Dp Date").agg(
-            Ritase=("Ritase", "sum"),
-            Volume=("Qty", "sum")
+    # =========================
+    # Truck Utilization
+    # =========================
+    st.subheader("🚛 Truck Utilization")
+    if "truck no" in df_filtered.columns:
+        truck_util = df_filtered.groupby("truck no").agg(
+            Total_Volume=("qty", "sum"),
+            Total_Trip=("dp no", "count")
         ).reset_index()
-
-        fig_delivery = px.bar(delivery, x="Dp Date", y=["Ritase", "Volume"],
-                              barmode="group", title="Delivery Performance (Ritase & Volume)")
-        st.plotly_chart(fig_delivery, use_container_width=True)
-
-        # =========================
-        # 2. Truck Utilization
-        # =========================
-        st.subheader("🚛 Truck Utilization")
-        truck_util = df_filtered.groupby("Truck No").agg(
-            Total_Trip=("Ritase", "sum"),
-            Total_Volume=("Qty", "sum"),
-            Avg_Load_Per_Trip=("Qty", "mean")
-        ).reset_index()
-
-        fig_truck = px.bar(truck_util, x="Truck No", y="Total_Volume",
-                           hover_data=["Total_Trip", "Avg_Load_Per_Trip"],
-                           color="Total_Trip", color_continuous_scale="Viridis",
-                           title="Truck Utilization (Volume & Trip)")
+        fig_truck = px.bar(truck_util, x="truck no", y="Total_Volume", text="Total_Trip", title="Truck Utilization")
         st.plotly_chart(fig_truck, use_container_width=True)
 
-        # =========================
-        # 3. Sales Performance
-        # =========================
-        st.subheader("👨‍💼 Sales Performance")
-        sales_perf = df_filtered.groupby("Salesman Name").agg(
-            Volume=("Qty", "sum"),
-            Trip=("Ritase", "sum")
+    # =========================
+    # Sales Performance
+    # =========================
+    st.subheader("👨‍💼 Sales Performance")
+    sales_perf = df_filtered.groupby("sales man").agg(
+        Volume=("qty", "sum"),
+        Trip=("dp no", "count")
+    ).reset_index()
+    fig_sales = px.bar(sales_perf, x="sales man", y="Volume", text="Trip", title="Sales Performance")
+    st.plotly_chart(fig_sales, use_container_width=True)
+
+    # =========================
+    # Customer Performance
+    # =========================
+    if "end customer name" in df_filtered.columns:
+        st.subheader("🏢 Customer Performance")
+        cust_perf = df_filtered.groupby("end customer name").agg(
+            Volume=("qty", "sum"),
+            Trip=("dp no", "count")
         ).reset_index()
-
-        fig_sales = px.bar(sales_perf, x="Salesman Name", y="Volume",
-                           hover_data=["Trip"], color="Trip",
-                           color_continuous_scale="Plasma",
-                           title="Volume per Salesman")
-        st.plotly_chart(fig_sales, use_container_width=True)
-
-        # =========================
-        # 4. Customer Performance
-        # =========================
-        st.subheader("🏬 Customer Performance")
-        cust_perf = df_filtered.groupby("End Customer Name").agg(
-            Volume=("Qty", "sum"),
-            Trip=("Ritase", "sum")
-        ).reset_index()
-
-        fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume",
-                          hover_data=["Trip"], color="Trip",
-                          color_continuous_scale="Cividis",
-                          title="Volume per End Customer")
+        fig_cust = px.bar(cust_perf, x="end customer name", y="Volume", text="Trip", title="Customer Performance")
         st.plotly_chart(fig_cust, use_container_width=True)
 
-        # =========================
-        # 5. Trend (Ritase & Volume)
-        # =========================
-        st.subheader("📈 Visualisasi Tren")
-        trend_ritase = df_filtered.groupby("Dp Date")["Ritase"].sum().reset_index()
-        trend_volume = df_filtered.groupby("Dp Date")["Qty"].sum().reset_index()
+    # =========================
+    # Distance Analysis
+    # =========================
+    if "distance" in df_filtered.columns:
+        st.subheader("📏 Distance Analysis")
+        dist_analysis = df_filtered.groupby("dp date")["distance"].mean().reset_index()
+        fig_dist = px.line(dist_analysis, x="dp date", y="distance", title="Rata-rata Jarak Pengiriman")
+        st.plotly_chart(fig_dist, use_container_width=True)
 
-        fig_trend = px.line(trend_ritase, x="Dp Date", y="Ritase", markers=True, title="Trend Ritase")
-        st.plotly_chart(fig_trend, use_container_width=True)
-
-        fig_trend_vol = px.line(trend_volume, x="Dp Date", y="Qty", markers=True, title="Trend Volume")
-        st.plotly_chart(fig_trend_vol, use_container_width=True)
-
-        # =========================
-        # 6. Distance Analysis
-        # =========================
-        if "Distance" in df_filtered.columns:
-            st.subheader("📍 Distance Analysis")
-            distance_analysis = df_filtered.groupby("Truck No")["Distance"].sum().reset_index()
-
-            fig_distance = px.bar(distance_analysis, x="Truck No", y="Distance",
-                                  title="Total Distance per Truck", color="Distance",
-                                  color_continuous_scale="Blues")
-            st.plotly_chart(fig_distance, use_container_width=True)
 else:
-    st.info("👆 Silakan upload file Excel untuk melihat dashboard.")
+    st.info("⬆️ Silakan upload file Excel terlebih dahulu.")
