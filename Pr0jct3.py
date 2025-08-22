@@ -4,18 +4,6 @@ import numpy as np
 import plotly.express as px
 from datetime import datetime
 
-"""
-Script: Dashboard Monitoring Delivery And Sales (Streamlit)
-Catatan:
-- Memenuhi requirement fleksibel penamaan kolom (case/space-insensitive) untuk: Dp Date, Qty, Sales Man, Dp No, Distance, Area, Plant, Truck, End Customer.
-- Filter lengkap: Start/End Date, Area, Plant (dependen Area), tombol Reset.
-- Realtime Date & Time di atas judul.
-- Dua fitur dashboard: Logistic + Sales & End Customer Performance.
-- Desain futuristik (Light/Dark), highlight nilai tertinggi, label angka muncul, format ribuan (,) dan AVG tanpa desimal.
-- Export hasil filter ke Excel.
-- Komentar inline disediakan di bagian yang kompleks.
-"""
-
 # =========================
 # Page Config & Theme Toggle
 # =========================
