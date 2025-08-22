@@ -138,21 +138,21 @@ if uploaded_file:
     st.plotly_chart(styled_chart(fig_vol_day, height=400), use_container_width=True)
 
     # =========================
-    # 3. Delivery Performance
+    # 3. Delivery Performance (Area & Plant dengan volume terbesar)
     # =========================
     col_area, col_plant = st.columns(2)
     with col_area:
         vol_area = df_filtered.groupby("Area")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        max_area = vol_area.loc[vol_area["Volume"].idxmax(),"Area"]
-        vol_area["Color"] = [highlight_color if x==max_area else color_palette[i%len(color_palette)] for i,x in enumerate(vol_area["Area"])]
+        max_area = vol_area["Volume"].idxmax() if not vol_area.empty else 0
+        vol_area["Color"] = [highlight_color if i==max_area else color_palette[i%len(color_palette)] for i in range(len(vol_area))]
         fig_area = px.bar(vol_area, x="Area", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
                           title="Total Volume per Area (Highlight tertinggi)")
         fig_area.update_traces(textposition="outside", cliponaxis=False)
         st.plotly_chart(styled_chart(fig_area), use_container_width=True)
     with col_plant:
         vol_plant = df_filtered.groupby("Plant Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        max_plant = vol_plant.loc[vol_plant["Volume"].idxmax(),"Plant Name"]
-        vol_plant["Color"] = [highlight_color if x==max_plant else color_palette[i%len(color_palette)] for i,x in enumerate(vol_plant["Plant Name"])]
+        max_plant = vol_plant["Volume"].idxmax() if not vol_plant.empty else 0
+        vol_plant["Color"] = [highlight_color if i==max_plant else color_palette[i%len(color_palette)] for i in range(len(vol_plant))]
         fig_plant = px.bar(vol_plant, x="Plant Name", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
                            title="Total Volume per Plant (Highlight tertinggi)")
         fig_plant.update_traces(textposition="outside", cliponaxis=False)
@@ -195,16 +195,16 @@ if uploaded_file:
     # 6. Sales & Customer Performance
     # =========================
     sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-    max_sales = sales_perf.loc[sales_perf["Volume"].idxmax(),"Sales Man"]
-    sales_perf["Color"] = [highlight_color if x==max_sales else color_palette[i%len(color_palette)] for i,x in enumerate(sales_perf["Sales Man"])]
+    max_sales = sales_perf["Volume"].idxmax() if not sales_perf.empty else 0
+    sales_perf["Color"] = [highlight_color if i==max_sales else color_palette[i%len(color_palette)] for i in range(len(sales_perf))]
     fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
                        title="Volume per Sales (Highlight tertinggi)")
     fig_sales.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
 
     cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-    max_cust = cust_perf.loc[cust_perf["Volume"].idxmax(),"End Customer Name"]
-    cust_perf["Color"] = [highlight_color if x==max_cust else color_palette[i%len(color_palette)] for i,x in enumerate(cust_perf["End Customer Name"])]
+    max_cust = cust_perf["Volume"].idxmax() if not cust_perf.empty else 0
+    cust_perf["Color"] = [highlight_color if i==max_cust else color_palette[i%len(color_palette)] for i in range(len(cust_perf))]
     fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="Color", color_discrete_map="identity",
                       title="Volume per End Customer (Highlight tertinggi)")
     fig_cust.update_traces(textposition="outside", cliponaxis=False)
