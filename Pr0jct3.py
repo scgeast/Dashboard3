@@ -72,7 +72,8 @@ if uploaded_file:
         "Volume": ["Volume","Qty","Quantity"],
         "Ritase": ["Ritase","Trips"],
         "Truck No": ["Truck No","Truck Number","Vehicle"],
-        "Distance": ["Distance","Km","Jarak"]
+        "Distance": ["Distance","Km","Jarak"],
+        "DP No": ["DP No","Delivery No","No Pengiriman"]
     }
 
     for target_col, alternatives in column_mapping.items():
@@ -144,21 +145,29 @@ if uploaded_file:
     # 4. Truck Utilization (FULL WIDTH)
     # =========================
     st.markdown("<hr><h2>🚛 Truck Utilization</h2>", unsafe_allow_html=True)
+    # Total Trip per Truck
     ritase_truck = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index().sort_values("Ritase", ascending=False)
     fig_rit = px.bar(ritase_truck, x="Truck No", y="Ritase", text="Ritase", color="Truck No",
                      color_discrete_sequence=color_palette, title="Total Trip per Truck")
     fig_rit.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_rit), use_container_width=True)
 
-    avg_rit = df_filtered.groupby("Truck No")["Ritase"].mean().reset_index()
-    fig_avg_rit = px.bar(avg_rit, x="Truck No", y="Ritase", text="Ritase", color="Truck No",
-                         color_discrete_sequence=color_palette, title="Avg Trip per Truck")
+    # Avg Trip per Truck (dari DP No unik)
+    if "DP No" in df_filtered.columns:
+        avg_trip = df_filtered.groupby("Truck No")["DP No"].nunique().reset_index()
+        avg_trip.rename(columns={"DP No":"Avg Trip per Truck"}, inplace=True)
+    else:
+        avg_trip = df_filtered.groupby("Truck No")["Ritase"].mean().reset_index()
+        avg_trip.rename(columns={"Ritase":"Avg Trip per Truck"}, inplace=True)
+    fig_avg_rit = px.bar(avg_trip, x="Truck No", y="Avg Trip per Truck", text="Avg Trip per Truck",
+                         color="Truck No", color_discrete_sequence=color_palette, title="Avg Trip per Truck")
     fig_avg_rit.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_avg_rit), use_container_width=True)
 
-    avg_load = df_filtered.groupby("Truck No")["Volume"].mean().reset_index()
-    fig_avg_load = px.bar(avg_load, x="Truck No", y="Volume", text="Volume", color="Truck No",
-                          color_discrete_sequence=color_palette, title="Avg Load per Trip")
+    # Avg Load per Trip (Volume / Ritase)
+    avg_load = df_filtered.groupby("Truck No").apply(lambda x: x["Volume"].sum()/x["Ritase"].sum()).reset_index(name="Avg Load per Trip")
+    fig_avg_load = px.bar(avg_load, x="Truck No", y="Avg Load per Trip", text="Avg Load per Trip",
+                          color="Truck No", color_discrete_sequence=color_palette, title="Avg Load per Trip")
     fig_avg_load.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_avg_load), use_container_width=True)
 
