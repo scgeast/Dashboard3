@@ -119,9 +119,9 @@ def boxed_metric(label, value):
 # =========================
 def render_volume_chart(df_filtered):
     st.markdown(f"<h2>📈 Volume Per Day</h2>", unsafe_allow_html=True)
-    sales_trend = df_filtered.groupby("Tanggal Pengiriman")["Volume"].sum().reset_index()
+    sales_trend = df_filtered.groupby("Dp Date")["Volume"].sum().reset_index()
     sales_trend["Volume"] = sales_trend["Volume"].round(2)
-    fig = px.line(sales_trend, x="Tanggal Pengiriman", y="Volume", text="Volume", title="Volume Per Day")
+    fig = px.line(sales_trend, x="Dp Date", y="Volume", text="Volume", title="Volume Per Day")
     fig.update_traces(mode="lines+markers+text", textposition="top center")
     st.plotly_chart(styled_chart(fig, height=400, font_size=13), use_container_width=True)
 
@@ -132,9 +132,9 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df.columns = df.columns.str.strip()
 
-    # Rename kolom jika perlu
+    # Rename kolom
     rename_map = {
-        "Tanggal P": "Tanggal Pengiriman",
+        "Tanggal P": "Dp Date",
         "Plant Name": "Plant Name",
         "Area": "Area",
         "Ritase": "Ritase"
@@ -146,14 +146,14 @@ if uploaded_file:
         if col not in df.columns:
             df[col] = 1 if col in ["Volume", "Ritase", "Distance"] else "Unknown"
 
-    df["Tanggal Pengiriman"] = pd.to_datetime(df["Tanggal Pengiriman"])
+    df["Dp Date"] = pd.to_datetime(df["Dp Date"])
 
     # =========================
     # Sidebar Filter
     # =========================
     st.sidebar.header("🔎 Filter Data")
-    start_date = st.sidebar.date_input("Start Date", df["Tanggal Pengiriman"].min())
-    end_date = st.sidebar.date_input("End Date", df["Tanggal Pengiriman"].max())
+    start_date = st.sidebar.date_input("Start Date", df["Dp Date"].min())
+    end_date = st.sidebar.date_input("End Date", df["Dp Date"].max())
     area = st.sidebar.multiselect("Area", options=df["Area"].dropna().unique())
     plant_options = df[df["Area"].isin(area)]["Plant Name"].dropna().unique() if area else df["Plant Name"].dropna().unique()
     plant = st.sidebar.multiselect("Plant Name", options=plant_options)
@@ -165,8 +165,8 @@ if uploaded_file:
 
     # Filter Data
     df_filtered = df[
-        (df["Tanggal Pengiriman"] >= pd.to_datetime(start_date)) &
-        (df["Tanggal Pengiriman"] <= pd.to_datetime(end_date))
+        (df["Dp Date"] >= pd.to_datetime(start_date)) &
+        (df["Dp Date"] <= pd.to_datetime(end_date))
     ]
     if area:
         df_filtered = df_filtered[df_filtered["Area"].isin(area)]
@@ -250,12 +250,12 @@ if uploaded_file:
     # Trend Visual & Distance
     # =========================
     st.subheader("📈 Trend Volume & Ritase")
-    trend_ritase = df_filtered.groupby("Tanggal Pengiriman")["Ritase"].sum().reset_index()
-    fig_trend_ritase = px.line(trend_ritase, x="Tanggal Pengiriman", y="Ritase", text="Ritase", markers=True, title="Trend Ritase")
+    trend_ritase = df_filtered.groupby("Dp Date")["Ritase"].sum().reset_index()
+    fig_trend_ritase = px.line(trend_ritase, x="Dp Date", y="Ritase", text="Ritase", markers=True, title="Trend Ritase")
     st.plotly_chart(styled_chart(fig_trend_ritase), use_container_width=True)
 
-    trend_volume = df_filtered.groupby("Tanggal Pengiriman")["Volume"].sum().reset_index()
-    fig_trend_volume = px.line(trend_volume, x="Tanggal Pengiriman", y="Volume", text="Volume", markers=True, title="Trend Volume")
+    trend_volume = df_filtered.groupby("Dp Date")["Volume"].sum().reset_index()
+    fig_trend_volume = px.line(trend_volume, x="Dp Date", y="Volume", text="Volume", markers=True, title="Trend Volume")
     st.plotly_chart(styled_chart(fig_trend_volume), use_container_width=True)
 
     st.subheader("📍 Distance Analysis")
