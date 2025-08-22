@@ -56,27 +56,45 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df.columns = df.columns.str.strip()
 
+    # =========================
     # Mapping kolom utama
+    # =========================
     mapping = {
         "Dp Date":["Tanggal P","Dp Date","Delivery Date","DP Date"],
         "Sales Man":["Salesman","Sales Man"],
         "Area":["Area","Region"],
         "Plant Name":["Plant Name","Plant"],
         "End Customer Name":["End Customer","Customer","End Customer Name"],
-        "Volume":["Volume","Qty","Quantity"],
-        "Ritase":["Ritase","Trips","DP No"],
         "Truck No":["Truck No","Truck Number"],
         "Distance":["Distance","Km"]
     }
     for target, alt in mapping.items():
         found = next((c for c in alt if c in df.columns), None)
         if found: df.rename(columns={found:target}, inplace=True)
-        else: df[target] = 1 if target in ["Volume","Ritase","Distance"] else "Unknown"
+        else: df[target] = "Unknown"
 
-    # Pastikan Volume = Qty
-    if df["Volume"].isnull().all() or df["Volume"].sum()==len(df):
-        st.error("File Excel harus punya kolom Qty/Volume yang valid untuk menghitung Volume per Sales/Customer.")
+    # Volume = Qty
+    mapping_volume = ["Volume","Qty","Quantity"]
+    found_vol = next((c for c in mapping_volume if c in df.columns), None)
+    if found_vol:
+        df.rename(columns={found_vol:"Volume"}, inplace=True)
+    else:
+        st.error("File Excel harus punya kolom Qty/Volume/Quantity.")
         st.stop()
+    df["Volume"] = pd.to_numeric(df["Volume"], errors="coerce").fillna(0)
+
+    # Ritase / Trip = DP No
+    mapping_ritase = ["Ritase","Trips","DP No"]
+    found_rit = next((c for c in mapping_ritase if c in df.columns), None)
+    if found_rit:
+        df.rename(columns={found_rit:"Ritase"}, inplace=True)
+    else:
+        df["Ritase"] = 0
+    df["Ritase"] = pd.to_numeric(df["Ritase"], errors="coerce").fillna(0)
+
+    # Distance numeric
+    if "Distance" not in df.columns: df["Distance"] = 0
+    df["Distance"] = pd.to_numeric(df["Distance"], errors="coerce").fillna(0)
 
     df["Dp Date"] = pd.to_datetime(df["Dp Date"], errors='coerce')
 
@@ -106,8 +124,8 @@ if uploaded_file:
     cols = st.columns(5)
     with cols[0]: boxed_metric("Total Area", df_filtered["Area"].nunique())
     with cols[1]: boxed_metric("Total Plant", df_filtered["Plant Name"].nunique())
-    with cols[2]: boxed_metric("Total Volume", f"{df_filtered['Volume'].sum():,.2f}")
-    with cols[3]: boxed_metric("Total Ritase", df_filtered["Ritase"].sum())
+    with cols[2]: boxed_metric("Total Volume (Qty)", f"{df_filtered['Volume'].sum():,.2f}")
+    with cols[3]: boxed_metric("Total Ritase (DP No)", df_filtered["Ritase"].sum())
     with cols[4]: boxed_metric("Truck Mixer", df_filtered["Truck No"].nunique())
 
     # =========================
@@ -176,15 +194,32 @@ if uploaded_file:
     # 6. Sales & Customer Performance
     # =========================
     st.markdown("<hr><h2>👤 Sales & Customer Performance</h2>", unsafe_allow_html=True)
+
+    # Volume per Sales (Sum Qty)
     sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-    fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Sales Man",
-                       color_discrete_sequence=color_palette, title="Volume per Sales")
+    fig_sales = px.bar(
+        sales_perf, 
+        x="Sales Man", 
+        y="Volume", 
+        text="Volume", 
+        color="Sales Man",
+        color_discrete_sequence=color_palette, 
+        title="Volume per Sales (Sum Qty per Sales)"
+    )
     fig_sales.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
 
+    # Volume per End Customer (Sum Qty)
     cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-    fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="End Customer Name",
-                      color_discrete_sequence=color_palette, title="Volume per End Customer Name")
+    fig_cust = px.bar(
+        cust_perf, 
+        x="End Customer Name", 
+        y="Volume", 
+        text="Volume", 
+        color="End Customer Name",
+        color_discrete_sequence=color_palette, 
+        title="Volume per End Customer (Sum Qty per Customer)"
+    )
     fig_cust.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
 
