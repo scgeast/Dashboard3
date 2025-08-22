@@ -20,7 +20,7 @@ uploaded_file = st.file_uploader("📂 Upload File Excel", type=["xlsx", "xls"])
 
 if uploaded_file:
     file_size = uploaded_file.size / (1024 * 1024)  # ukuran MB
-    if file_size < 5 or file_size > 30:
+    if file_size < 2 or file_size > 30:
         st.error("⚠️ File harus berukuran antara 5MB - 30MB")
     else:
         # Baca file
