@@ -64,7 +64,7 @@ if uploaded_file:
         "Plant Name":["Plant Name","Plant"],
         "End Customer Name":["End Customer","Customer","End Customer Name"],
         "Volume":["Volume","Qty","Quantity"],
-        "Ritase":["Ritase","Trips"],
+        "Ritase":["Ritase","Trips","DP No"],
         "Truck No":["Truck No","Truck Number"],
         "Distance":["Distance","Km"]
     }
@@ -74,8 +74,8 @@ if uploaded_file:
         else: df[target] = 1 if target in ["Volume","Ritase","Distance"] else "Unknown"
 
     # Pastikan Volume = Qty
-    if "Volume" not in df.columns:
-        st.error("File Excel harus punya kolom Qty/Volume untuk menghitung Volume per Sales/Customer.")
+    if df["Volume"].isnull().all() or df["Volume"].sum()==len(df):
+        st.error("File Excel harus punya kolom Qty/Volume yang valid untuk menghitung Volume per Sales/Customer.")
         st.stop()
 
     df["Dp Date"] = pd.to_datetime(df["Dp Date"], errors='coerce')
