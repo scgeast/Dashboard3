@@ -103,7 +103,7 @@ if uploaded_file:
     if end_customer: df_filtered = df_filtered[df_filtered["End Customer Name"].isin(end_customer)]
 
     # =========================
-    # Hitung jumlah hari dari filter date
+    # Hitung jumlah hari filter
     # =========================
     num_days = (pd.to_datetime(end_date) - pd.to_datetime(start_date)).days + 1
 
@@ -146,50 +146,30 @@ if uploaded_file:
         st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
 
     # =========================
-    # Truck Utilization
+    # 4. Truck Utilization
     # =========================
+    st.markdown("<hr><h2>🚛 Truck Utilization</h2>", unsafe_allow_html=True)
 
-    # Total Trip per Truck (Ritase = DP No)
     total_trip = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index(name="Total Trip")
-    fig_total_trip = px.bar(
-        total_trip,
-        x="Truck No",
-        y="Total Trip",
-        text="Total Trip",
-        color="Truck No",
-        color_discrete_sequence=color_palette,
-        title="Total Trip per Truck"
-    )
+    total_trip["Avg Trip per Truck"] = total_trip["Total Trip"] / num_days
+    fig_total_trip = px.bar(total_trip, x="Truck No", y="Total Trip", text="Total Trip",
+                            color="Truck No", color_discrete_sequence=color_palette,
+                            title="Total Trip per Truck")
     fig_total_trip.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_total_trip), use_container_width=True)
 
-    # Avg Trip per Truck (per day) = Total Trip ÷ jumlah hari filter
-    total_trip["Avg Trip per Truck"] = total_trip["Total Trip"] / num_days
-    fig_avg_trip = px.bar(
-        total_trip,
-        x="Truck No",
-        y="Avg Trip per Truck",
-        text="Avg Trip per Truck",
-        color="Truck No",
-        color_discrete_sequence=color_palette,
-        title="Avg Trip per Truck (per Day)"
-    )
+    fig_avg_trip = px.bar(total_trip, x="Truck No", y="Avg Trip per Truck", text="Avg Trip per Truck",
+                          color="Truck No", color_discrete_sequence=color_palette,
+                          title="Avg Trip per Truck (per Day)")
     fig_avg_trip.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_avg_trip), use_container_width=True)
 
     # Avg Load per Trip = Total Volume per Truck ÷ jumlah hari filter
     total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
     total_vol_truck["Avg Load per Trip"] = total_vol_truck["Total Volume"] / num_days
-
-    fig_avg_load = px.bar(
-        total_vol_truck,
-        x="Truck No",
-        y="Avg Load per Trip",
-          text="Avg Load per Trip",
-        color="Truck No",
-        color_discrete_sequence=color_palette,
-        title="Avg Load per Trip"
-    )
+    fig_avg_load = px.bar(total_vol_truck, x="Truck No", y="Avg Load per Trip", text="Avg Load per Trip",
+                          color="Truck No", color_discrete_sequence=color_palette,
+                          title="Avg Load per Trip")
     fig_avg_load.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_avg_load), use_container_width=True)
 
@@ -197,45 +177,36 @@ if uploaded_file:
     # 5. Distance Analysis
     # =========================
     st.subheader("📍 Distance Analysis")
-    col_dist_plant, col_dist_area = st.columns(2)
-    with col_dist_plant:
+    col_dist1, col_dist2 = st.columns(2)
+    with col_dist1:
         avg_dist_plant = df_filtered.groupby("Plant Name")["Distance"].mean().reset_index()
-        fig_dist_plant = px.bar(avg_dist_plant, x="Plant Name", y="Distance", text="Distance",
-                                title="Avg Distance per Plant")
+        fig_dist_plant = px.bar(avg_dist_plant, x="Plant Name", y="Distance", text="Distance", title="Avg Distance per Plant")
         fig_dist_plant.update_traces(textposition="outside", cliponaxis=False)
         st.plotly_chart(styled_chart(fig_dist_plant), use_container_width=True)
-    with col_dist_area:
+    with col_dist2:
         avg_dist_area = df_filtered.groupby("Area")["Distance"].mean().reset_index()
-        fig_dist_area = px.bar(avg_dist_area, x="Area", y="Distance", text="Distance",
-                               title="Avg Distance per Area")
+        fig_dist_area = px.bar(avg_dist_area, x="Area", y="Distance", text="Distance", title="Avg Distance per Area")
         fig_dist_area.update_traces(textposition="outside", cliponaxis=False)
         st.plotly_chart(styled_chart(fig_dist_area), use_container_width=True)
 
     # =========================
     # 6. Sales & Customer Performance
     # =========================
-    sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+    st.markdown("<hr><h2>👤 Sales & Customer Performance</h2>", unsafe_allow_html=True)
 
-    fig_sales = px.bar(
-        sales_perf,
-        x="Sales Man",
-        y="Volume",
-        text="Volume",
-        color="Sales Man",
-        color_discrete_sequence=color_palette,
-        title="Volume per Sales"
-    )
+    # Volume per Sales
+    sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+    fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Sales Man",
+                       color_discrete_sequence=color_palette, title="Volume per Sales")
     fig_sales.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
 
+    # Volume per End Customer Name
     cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-    if not cust_perf.empty:
-        fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="End Customer Name",
-                          color_discrete_sequence=color_palette, title="Volume per End Customer Name")
-        fig_cust.update_traces(textposition="outside", cliponaxis=False)
-        st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
-    else:
-        st.info("No data available for End Customer Name")
+    fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="End Customer Name",
+                      color_discrete_sequence=color_palette, title="Volume per End Customer Name")
+    fig_cust.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
 
 else:
     st.info("📤 Silakan upload file Excel terlebih dahulu untuk menampilkan dashboard.")
