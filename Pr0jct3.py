@@ -25,17 +25,17 @@ h1,h2,h3,h4 {{color: {font_color}; text-shadow:0 0 10px {font_color};}}
 .metric-label {{font-weight:700;font-size:1.2rem;margin-bottom:8px;color:{font_color};}}
 .metric-value {{font-size:2rem;font-weight:900;color:{font_color};text-shadow:0 0 5px #00FFFF;}}
 div.stButton>button {{background-color:{font_color} !important;color:{bg_color} !important;font-weight:700;border-radius:10px;box-shadow:0 0 10px {font_color};}}
-div.stButton>button:hover {{background-color:#FF00FF !important;color:white !important;box-shadow:0 0 20px #FF00FF;}}
-</style>
-""", unsafe_allow_html=True)
+    div.stButton>button:hover {{background-color:#FF00FF !important;color:white !important;box-shadow:0 0 20px #FF00FF;}}
+    </style>
+    """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center;'>📦 Dashboard Analyst Delivery & Sales</h1>", unsafe_allow_html=True)
-uploaded_file = st.file_uploader("📂 Upload file Excel (5MB–30MB)", type=["xlsx","xls"])
+    st.markdown("<h1 style='text-align:center;'>📦 Dashboard Analyst Delivery & Sales</h1>", unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("📂 Upload file Excel (5MB–30MB)", type=["xlsx","xls"])
 
-# =========================
-# Fungsi chart & metric
-# =========================
-def styled_chart(fig, height=None, font_size=12, margin=None, text_position="outside", show_legend=False, title_font_size=18):
+    # =========================
+    # Fungsi chart & metric
+    # =========================
+    def styled_chart(fig, height=None, font_size=12, margin=None, text_position="outside", show_legend=False, title_font_size=18):
     fig.update_layout(plot_bgcolor=box_bg, paper_bgcolor=box_bg, font=dict(color=font_color,size=font_size),
                       title_font=dict(color=font_color,size=title_font_size),
                       xaxis=dict(tickangle=45, gridcolor='#222244'),
@@ -46,15 +46,17 @@ def styled_chart(fig, height=None, font_size=12, margin=None, text_position="out
     except: pass
     return fig
 
-def boxed_metric(label,value):
+    def boxed_metric(label,value):
     st.markdown(f"<div class='metric-box'><div class='metric-label'>{label}</div><div class='metric-value'>{value}</div></div>", unsafe_allow_html=True)
 
-# =========================
-# MAIN
-# =========================
-if uploaded_file:
+    # =========================
+    # MAIN
+    # =========================
+    if uploaded_file:
     df = pd.read_excel(uploaded_file)
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip().str.replace("\n","").str.replace("\r","")
+
+    st.write("Kolom yang ada di file:", df.columns.tolist())  # Debug kolom
 
     # =========================
     # Mapping kolom utama
@@ -76,17 +78,21 @@ if uploaded_file:
     # =========================
     # Volume dari kolom Qty
     # =========================
-    if "Qty" not in df.columns:
+    qty_col = next((c for c in df.columns if c.lower()=="qty"), None)
+    if not qty_col:
         st.error("File harus punya kolom Qty untuk menghitung Volume / Load.")
         st.stop()
+    df.rename(columns={qty_col:"Qty"}, inplace=True)
     df["Volume"] = pd.to_numeric(df["Qty"], errors="coerce").fillna(0)
 
     # =========================
     # Ritase / Trip dari kolom Dp No
     # =========================
-    if "Dp No" not in df.columns:
+    dpno_col = next((c for c in df.columns if c.lower()=="dp no"), None)
+    if not dpno_col:
         st.error("File harus punya kolom Dp No untuk menghitung Ritase / Trip.")
         st.stop()
+    df.rename(columns={dpno_col:"Dp No"}, inplace=True)
     df["Ritase"] = pd.to_numeric(df["Dp No"], errors="coerce").fillna(0)
 
     # Distance numeric
