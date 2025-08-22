@@ -165,16 +165,24 @@ if uploaded_file:
     fig_avg_trip.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_avg_trip), use_container_width=True)
 
-    # Avg Load per Trip = Total Volume per Truck ÷ jumlah hari filter
+    # Total Volume per Truck
     total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
+
+    # Avg Load per Trip = Total Volume per Truck / jumlah hari filter
     avg_load = total_vol_truck.copy()
     avg_load["Avg Load per Trip"] = avg_load["Total Volume"] / num_days
-    fig_avg_load = px.bar(avg_load, x="Truck No", y="Avg Load per Trip", text="Avg Load per Trip",
-                          color="Truck No", color_discrete_sequence=color_palette, title="Avg Load per Trip")
+
+    fig_avg_load = px.bar(
+        avg_load,
+        x="Truck No",
+        y="Avg Load per Trip",
+        text="Avg Load per Trip",
+        color="Truck No",
+        color_discrete_sequence=color_palette,
+        title="Avg Load per Trip"
+    )
     fig_avg_load.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_avg_load), use_container_width=True)
-
-
 
     # =========================
     # 5. Distance Analysis
