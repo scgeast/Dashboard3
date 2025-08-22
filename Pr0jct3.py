@@ -115,7 +115,7 @@ if uploaded_file:
     if salesman: df_filtered = df_filtered[df_filtered["Sales Man"].isin(salesman)]
     if end_customer: df_filtered = df_filtered[df_filtered["End Customer Name"].isin(end_customer)]
 
-    num_days = (pd.to_datetime(end_date)-pd.to_datetime(start_date)).days + 1
+    num_days = max(1, (pd.to_datetime(end_date)-pd.to_datetime(start_date)).days + 1)
 
     # =========================
     # 1. Summary
@@ -158,21 +158,29 @@ if uploaded_file:
     # =========================
     # 4. Truck Utilization
     # =========================
-    st.markdown("<hr><h2>🚛 Truck Utilization</h2>", unsafe_allow_html=True)
-    total_trip = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index(name="Total Trip")
-    total_trip["Avg Trip per Truck"] = total_trip["Total Trip"]/num_days
-    st.plotly_chart(styled_chart(px.bar(total_trip, x="Truck No", y="Total Trip", text="Total Trip",
-                                        color="Truck No", color_discrete_sequence=color_palette,
-                                        title="Total Trip per Truck").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
-    st.plotly_chart(styled_chart(px.bar(total_trip, x="Truck No", y="Avg Trip per Truck", text="Avg Trip per Truck",
-                                        color="Truck No", color_discrete_sequence=color_palette,
-                                        title="Avg Trip per Truck (per Day)").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
+    # =========================
+# 4. Truck Utilization
+# =========================
+st.markdown("<hr><h2>🚛 Truck Utilization</h2>", unsafe_allow_html=True)
 
-    total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
-    total_vol_truck["Avg Load per Trip"] = total_vol_truck["Total Volume"]/num_days
-    st.plotly_chart(styled_chart(px.bar(total_vol_truck, x="Truck No", y="Avg Load per Trip", text="Avg Load per Trip",
-                                        color="Truck No", color_discrete_sequence=color_palette,
-                                        title="Avg Load per Trip").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
+total_trip = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index(name="Total Trip")
+total_trip["Avg Trip per Truck"] = total_trip["Total Trip"]/num_days  # tetap sama, per hari
+
+total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
+total_vol_truck["Avg Load per Trip"] = total_vol_truck["Total Volume"]/num_days  # per hari sesuai filter
+
+st.plotly_chart(styled_chart(px.bar(total_trip, x="Truck No", y="Total Trip", text="Total Trip",
+                                    color="Truck No", color_discrete_sequence=color_palette,
+                                    title="Total Trip per Truck").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
+
+st.plotly_chart(styled_chart(px.bar(total_trip, x="Truck No", y="Avg Trip per Truck", text="Avg Trip per Truck",
+                                    color="Truck No", color_discrete_sequence=color_palette,
+                                    title="Avg Trip per Truck (per Day)").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
+
+st.plotly_chart(styled_chart(px.bar(total_vol_truck, x="Truck No", y="Avg Load per Trip", text="Avg Load per Trip",
+                                    color="Truck No", color_discrete_sequence=color_palette,
+                                    title=f"Avg Load per Truck per Day (Qty ÷ {num_days} hari)").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
+
 
     # =========================
     # 5. Distance Analysis
