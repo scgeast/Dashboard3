@@ -136,10 +136,10 @@ if uploaded_file:
     fig_vol_day = px.line(vol_day, x="Dp Date", y="Volume", markers=True, text="Volume", title="Volume Per Day")
     fig_vol_day.update_traces(textposition="top center", textfont=dict(size=11))
     st.plotly_chart(styled_chart(fig_vol_day, height=400), use_container_width=True)
+
     # =========================
     # 3. Delivery Performance
     # =========================
-    st.subheader("🚚 Delivery Performance")
     col_area, col_plant = st.columns(2)
     with col_area:
         vol_area = df_filtered.groupby("Area")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
@@ -166,7 +166,6 @@ if uploaded_file:
     total_trip["Avg Trip per Truck"] = total_trip["Total Trip"]/num_days
     total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
     total_vol_truck["Avg Load per Trip"] = total_vol_truck["Total Volume"]/num_days
-
     st.plotly_chart(styled_chart(px.bar(total_trip, x="Truck No", y="Total Trip", text="Total Trip",
                                         color="Truck No", color_discrete_sequence=color_palette,
                                         title="Total Trip per Truck").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
@@ -180,7 +179,6 @@ if uploaded_file:
     # =========================
     # 5. Distance Analysis
     # =========================
-    st.subheader("📍 Distance Analysis")
     col_dist1, col_dist2 = st.columns(2)
     with col_dist1:
         avg_dist_plant = df_filtered.groupby("Plant Name")["Distance"].mean().reset_index()
@@ -196,9 +194,6 @@ if uploaded_file:
     # =========================
     # 6. Sales & Customer Performance
     # =========================
-    st.markdown("<hr><h2>👤 Sales & Customer Performance</h2>", unsafe_allow_html=True)
-
-    # Volume per Sales
     sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
     max_sales = sales_perf.loc[sales_perf["Volume"].idxmax(),"Sales Man"]
     sales_perf["Color"] = [highlight_color if x==max_sales else color_palette[i%len(color_palette)] for i,x in enumerate(sales_perf["Sales Man"])]
@@ -207,7 +202,6 @@ if uploaded_file:
     fig_sales.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
 
-    # Volume per Customer
     cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
     max_cust = cust_perf.loc[cust_perf["Volume"].idxmax(),"End Customer Name"]
     cust_perf["Color"] = [highlight_color if x==max_cust else color_palette[i%len(color_palette)] for i,x in enumerate(cust_perf["End Customer Name"])]
