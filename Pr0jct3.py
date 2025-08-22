@@ -53,9 +53,19 @@ def boxed_metric(label,value):
 # MAIN
 # =========================
 if uploaded_file:
-    df = pd.read_excel(uploaded_file)
+    # Baca sheet pertama tanpa header
+    df_raw = pd.read_excel(uploaded_file, header=None)
+
+    # Cari header pertama yang ada kolom Qty
+    header_row = 0
+    for i, row in df_raw.iterrows():
+        if row.notna().any() and any("qty" in str(x).lower() for x in row if x):
+            header_row = i
+            break
+
+    df = pd.read_excel(uploaded_file, header=header_row)
     df.columns = df.columns.str.strip().str.replace("\n","").str.replace("\r","")
-    st.write("Kolom yang ada di file:", df.columns.tolist())  # Debug kolom
+    st.write("Kolom yang ada di file:", df.columns.tolist())
 
     # =========================
     # Mapping kolom utama
@@ -74,7 +84,7 @@ if uploaded_file:
         else: df[target] = "Unknown"
 
     # =========================
-    # Deteksi kolom tanggal
+    # Tanggal
     # =========================
     date_col = next((c for c in df.columns if c and "date" in str(c).lower()), None)
     if not date_col:
@@ -84,7 +94,7 @@ if uploaded_file:
     df["Dp Date"] = pd.to_datetime(df["Dp Date"], errors='coerce')
 
     # =========================
-    # Deteksi Qty
+    # Qty / Volume
     # =========================
     qty_col = next((c for c in df.columns if c and "qty" in str(c).lower()), None)
     if not qty_col:
@@ -94,16 +104,18 @@ if uploaded_file:
     df["Volume"] = pd.to_numeric(df["Qty"], errors="coerce").fillna(0)
 
     # =========================
-    # Deteksi DP No / Ritase
+    # Dp No / Ritase
     # =========================
     dpno_col = next((c for c in df.columns if c and "dp" in str(c).lower()), None)
     if not dpno_col:
         st.error("File harus punya kolom Dp No untuk menghitung Ritase / Trip.")
         st.stop()
     df.rename(columns={dpno_col:"Dp No"}, inplace=True)
-    df["Ritase"] = 1  # setiap baris = 1 trip
+    df["Ritase"] = 1  # Setiap baris = 1 trip
 
-    # Distance numeric
+    # =========================
+    # Distance
+    # =========================
     if "Distance" not in df.columns: df["Distance"] = 0
     df["Distance"] = pd.to_numeric(df["Distance"], errors="coerce").fillna(0)
 
