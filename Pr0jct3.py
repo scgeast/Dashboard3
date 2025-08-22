@@ -115,7 +115,7 @@ if uploaded_file:
     with cols[0]: boxed_metric("Total Area", df_filtered["Area"].nunique())
     with cols[1]: boxed_metric("Total Plant", df_filtered["Plant Name"].nunique())
     with cols[2]: boxed_metric("Total Volume", f"{df_filtered['Volume'].sum():,.2f}")
-    with cols[3]: boxed_metric("Total Ritase", f"{df_filtered['Ritase'].sum():,.2f}")
+    with cols[3]: boxed_metric("Total Ritase", df_filtered["Ritase"].sum())
     with cols[4]: boxed_metric("Truck Mixer", df_filtered["Truck No"].nunique())
 
     # =========================
@@ -150,20 +150,20 @@ if uploaded_file:
     # =========================
     st.markdown("<hr><h2>🚛 Truck Utilization</h2>", unsafe_allow_html=True)
 
-    # Total Trip per Truck
-    ritase_truck = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index().sort_values("Ritase", ascending=False)
-    fig_rit = px.bar(ritase_truck, x="Truck No", y="Ritase", text="Ritase", color="Truck No",
-                     color_discrete_sequence=color_palette, title="Total Trip per Truck")
-    fig_rit.update_traces(textposition="outside", cliponaxis=False)
-    st.plotly_chart(styled_chart(fig_rit), use_container_width=True)
+    # Total Trip per Truck (Ritase = DP No)
+    total_trip = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index(name="Total Trip")
+    fig_total_trip = px.bar(total_trip, x="Truck No", y="Total Trip", text="Total Trip", color="Truck No",
+                            color_discrete_sequence=color_palette, title="Total Trip per Truck")
+    fig_total_trip.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_total_trip), use_container_width=True)
 
-    # Avg Trip per Truck (per hari)
-    avg_trip = ritase_truck.copy()
-    avg_trip["Avg Trip per Truck"] = avg_trip["Ritase"] / num_days
-    fig_avg_rit = px.bar(avg_trip, x="Truck No", y="Avg Trip per Truck", text="Avg Trip per Truck",
-                         color="Truck No", color_discrete_sequence=color_palette, title="Avg Trip per Truck (per Day)")
-    fig_avg_rit.update_traces(textposition="outside", cliponaxis=False)
-    st.plotly_chart(styled_chart(fig_avg_rit), use_container_width=True)
+    # Avg Trip per Truck (per day) = total Volume / jumlah hari filter
+    avg_trip = df_filtered.groupby("Truck No")["Volume"].sum().reset_index()
+    avg_trip["Avg Trip per Truck"] = avg_trip["Volume"] / num_days
+    fig_avg_trip = px.bar(avg_trip, x="Truck No", y="Avg Trip per Truck", text="Avg Trip per Truck",
+                          color="Truck No", color_discrete_sequence=color_palette, title="Avg Trip per Truck (per Day)")
+    fig_avg_trip.update_traces(textposition="outside", cliponaxis=False)
+    st.plotly_chart(styled_chart(fig_avg_trip), use_container_width=True)
 
     # Avg Load per Trip (rata-rata Volume per Truck)
     avg_load = df_filtered.groupby("Truck No")["Volume"].mean().reset_index(name="Avg Load per Trip")
