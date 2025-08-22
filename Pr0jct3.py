@@ -175,21 +175,41 @@ if uploaded_file:
         fig_dist_area.update_traces(textposition="outside")
         st.plotly_chart(styled_chart(fig_dist_area), use_container_width=True)
 
-    # =========================
-    # 6. Sales & Customer Performance
-    # =========================
-    st.subheader("👤 Sales & Customer Performance")
-    col_sales, col_cust = st.columns(2)
-    with col_sales:
-        sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Sales Man", color_discrete_sequence=color_palette, title="Volume per Sales")
-        fig_sales.update_traces(textposition="outside")
-        st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
-    with col_cust:
-        cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="End Customer Name", color_discrete_sequence=color_palette, title="Volume per End Customer Name")
-        fig_cust.update_traces(textposition="outside")
-        st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
+ # =========================
+# 6. Sales & Customer Performance
+# =========================
+st.subheader("👤 Sales & Customer Performance")
+col_sales, col_cust = st.columns(2)
+
+with col_sales:
+    # Group by Sales Man
+    sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+    fig_sales = px.bar(
+        sales_perf,
+        x="Sales Man",
+        y="Volume",
+        text="Volume",
+        color="Sales Man",
+        color_discrete_sequence=color_palette,
+        title="Volume per Sales"
+    )
+    fig_sales.update_traces(textposition="outside")
+    st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
+
+with col_cust:
+    # Group by End Customer Name
+    cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+    fig_cust = px.bar(
+        cust_perf,
+        x="End Customer Name",
+        y="Volume",
+        text="Volume",
+        color="End Customer Name",
+        color_discrete_sequence=color_palette,
+        title="Volume per End Customer Name"
+    )
+    fig_cust.update_traces(textposition="outside")
+    st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
 
 else:
     st.info("📤 Silakan upload file Excel terlebih dahulu untuk menampilkan dashboard.")
