@@ -103,22 +103,18 @@ if uploaded_file:
     if end_customer: df_filtered = df_filtered[df_filtered["End Customer Name"].isin(end_customer)]
 
     # =========================
-    # Summary Metrics
+    # 1. Summary Metrics
     # =========================
     st.markdown("<h2>📊 Summary</h2>", unsafe_allow_html=True)
-    cols = st.columns(6)
+    cols = st.columns(5)
     with cols[0]: boxed_metric("Total Area", df_filtered["Area"].nunique())
     with cols[1]: boxed_metric("Total Plant", df_filtered["Plant Name"].nunique())
     with cols[2]: boxed_metric("Total Volume", f"{df_filtered['Volume'].sum():,.2f}")
     with cols[3]: boxed_metric("Total Ritase", f"{df_filtered['Ritase'].sum():,.2f}")
-    with cols[4]:
-        # Total End Customer unik dari kolom End Customer No
-        total_end_customer = df_filtered["End Customer No"].nunique() if "End Customer No" in df_filtered.columns else 0
-        boxed_metric("Total End Customer", total_end_customer)
-    with cols[5]: boxed_metric("Truck Mixer", df_filtered["Truck No"].nunique())
+    with cols[4]: boxed_metric("Truck Mixer", df_filtered["Truck No"].nunique())
 
     # =========================
-    # Volume Per Day
+    # 2. Volume Per Day
     # =========================
     st.markdown("<h2>📈 Volume Per Day</h2>", unsafe_allow_html=True)
     sales_trend = df_filtered.groupby("Dp Date")["Volume"].sum().reset_index()
@@ -127,25 +123,7 @@ if uploaded_file:
     st.plotly_chart(styled_chart(fig_vol_day, height=400), use_container_width=True)
 
     # =========================
-    # Avg Load per Trip
-    # =========================
-    st.subheader("🚛 Avg Load per Trip")
-    avg_load = df_filtered.groupby("Truck No")["Volume"].mean().reset_index()
-    fig_avg_load = px.bar(avg_load, x="Truck No", y="Volume", text="Volume", color="Truck No", color_discrete_sequence=color_palette)
-    fig_avg_load.update_traces(textposition="outside")
-    st.plotly_chart(styled_chart(fig_avg_load), use_container_width=True)
-
-    # =========================
-    # Avg Ritase per Day
-    # =========================
-    st.subheader("📈 Avg Ritase per Day")
-    avg_ritase_day = df_filtered.groupby("Dp Date")["Ritase"].mean().reset_index()
-    fig_avg_rit = px.line(avg_ritase_day, x="Dp Date", y="Ritase", markers=True, text="Ritase")
-    fig_avg_rit.update_traces(textposition="top center", textfont=dict(size=11))
-    st.plotly_chart(styled_chart(fig_avg_rit), use_container_width=True)
-
-    # =========================
-    # Delivery per Area & Plant
+    # 3. Delivery Performance
     # =========================
     st.subheader("🚚 Delivery Performance")
     col_area, col_plant = st.columns(2)
@@ -161,32 +139,28 @@ if uploaded_file:
         st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
 
     # =========================
-    # Sales & Customer Performance
-    # =========================
-    st.subheader("👤 Sales & Customer Performance")
-    col_sales, col_cust = st.columns(2)
-    with col_sales:
-        sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Sales Man", color_discrete_sequence=color_palette)
-        fig_sales.update_traces(textposition="outside")
-        st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
-    with col_cust:
-        cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="End Customer Name", color_discrete_sequence=color_palette)
-        fig_cust.update_traces(textposition="outside")
-        st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
-
-    # =========================
-    # Truck Utilization
+    # 4. Truck Utilization
     # =========================
     st.subheader("🚛 Truck Utilization")
-    ritase_truck = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index().sort_values("Ritase", ascending=False)
-    fig_rit = px.bar(ritase_truck, x="Truck No", y="Ritase", text="Ritase", color="Truck No", color_discrete_sequence=color_palette)
-    fig_rit.update_traces(textposition="outside")
-    st.plotly_chart(styled_chart(fig_rit), use_container_width=True)
+    col_trip, col_avg_trip, col_avg_load = st.columns(3)
+    with col_trip:
+        ritase_truck = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index().sort_values("Ritase", ascending=False)
+        fig_rit = px.bar(ritase_truck, x="Truck No", y="Ritase", text="Ritase", color="Truck No", color_discrete_sequence=color_palette)
+        fig_rit.update_traces(textposition="outside")
+        st.plotly_chart(styled_chart(fig_rit), use_container_width=True)
+    with col_avg_trip:
+        avg_rit = df_filtered.groupby("Truck No")["Ritase"].mean().reset_index()
+        fig_avg_rit = px.bar(avg_rit, x="Truck No", y="Ritase", text="Ritase", color="Truck No", color_discrete_sequence=color_palette)
+        fig_avg_rit.update_traces(textposition="outside")
+        st.plotly_chart(styled_chart(fig_avg_rit), use_container_width=True)
+    with col_avg_load:
+        avg_load = df_filtered.groupby("Truck No")["Volume"].mean().reset_index()
+        fig_avg_load = px.bar(avg_load, x="Truck No", y="Volume", text="Volume", color="Truck No", color_discrete_sequence=color_palette)
+        fig_avg_load.update_traces(textposition="outside")
+        st.plotly_chart(styled_chart(fig_avg_load), use_container_width=True)
 
     # =========================
-    # Distance Analysis
+    # 5. Distance Analysis
     # =========================
     st.subheader("📍 Distance Analysis")
     col_dist_plant, col_dist_area = st.columns(2)
@@ -200,6 +174,22 @@ if uploaded_file:
         fig_dist_area = px.bar(avg_dist_area, x="Area", y="Distance", text="Distance")
         fig_dist_area.update_traces(textposition="outside")
         st.plotly_chart(styled_chart(fig_dist_area), use_container_width=True)
+
+    # =========================
+    # 6. Sales & Customer Performance
+    # =========================
+    st.subheader("👤 Sales & Customer Performance")
+    col_sales, col_cust = st.columns(2)
+    with col_sales:
+        sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+        fig_sales = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Sales Man", color_discrete_sequence=color_palette)
+        fig_sales.update_traces(textposition="outside")
+        st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
+    with col_cust:
+        cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+        fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="End Customer Name", color_discrete_sequence=color_palette)
+        fig_cust.update_traces(textposition="outside")
+        st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
 
 else:
     st.info("📤 Silakan upload file Excel terlebih dahulu untuk menampilkan dashboard.")
