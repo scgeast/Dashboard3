@@ -55,9 +55,12 @@ def boxed_metric(label,value):
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df.columns = df.columns.str.strip().str.replace("\n","").str.replace("\r","")
+
     st.write("Kolom yang ada di file:", df.columns.tolist())  # Debug kolom
 
+    # =========================
     # Mapping kolom utama
+    # =========================
     mapping = {
         "Dp Date":["Tanggal P","Dp Date","Delivery Date","DP Date"],
         "Sales Man":["Salesman","Sales Man"],
@@ -72,7 +75,9 @@ if uploaded_file:
         if found: df.rename(columns={found:target}, inplace=True)
         else: df[target] = "Unknown"
 
+    # =========================
     # Volume dari kolom Qty
+    # =========================
     qty_col = next((c for c in df.columns if c.lower()=="qty"), None)
     if not qty_col:
         st.error("File harus punya kolom Qty untuk menghitung Volume / Load.")
@@ -80,7 +85,9 @@ if uploaded_file:
     df.rename(columns={qty_col:"Qty"}, inplace=True)
     df["Volume"] = pd.to_numeric(df["Qty"], errors="coerce").fillna(0)
 
+    # =========================
     # Ritase / Trip dari kolom Dp No
+    # =========================
     dpno_col = next((c for c in df.columns if c.lower()=="dp no"), None)
     if not dpno_col:
         st.error("File harus punya kolom Dp No untuk menghitung Ritase / Trip.")
@@ -93,7 +100,9 @@ if uploaded_file:
     df["Distance"] = pd.to_numeric(df["Distance"], errors="coerce").fillna(0)
     df["Dp Date"] = pd.to_datetime(df["Dp Date"], errors='coerce')
 
+    # =========================
     # Sidebar Filter
+    # =========================
     st.sidebar.header("🔎 Filter Data")
     start_date = st.sidebar.date_input("Start Date", df["Dp Date"].min())
     end_date = st.sidebar.date_input("End Date", df["Dp Date"].max())
@@ -159,22 +168,22 @@ if uploaded_file:
     total_trip = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index(name="Total Trip")
     total_trip["Avg Trip per Truck"] = total_trip["Total Trip"] / num_days
     total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
-    total_vol_truck["Avg Load per Trip"] = total_vol_truck["Total Volume"] / num_days
+    total_vol_truck = total_vol_truck.merge(total_trip[["Truck No","Total Trip"]], on="Truck No", how="left")
+    total_vol_truck["Avg Load per Trip"] = total_vol_truck.apply(lambda x: x["Total Volume"]/x["Total Trip"] if x["Total Trip"]>0 else 0, axis=1)
 
     st.plotly_chart(styled_chart(px.bar(total_trip, x="Truck No", y="Total Trip", text="Total Trip",
                                         color="Truck No", color_discrete_sequence=color_palette,
                                         title="Total Trip per Truck").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
     st.plotly_chart(styled_chart(px.bar(total_trip, x="Truck No", y="Avg Trip per Truck", text="Avg Trip per Truck",
                                         color="Truck No", color_discrete_sequence=color_palette,
-                                        title="Avg Trip per Truck (per Day)").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
+                                        title=f"Avg Trip per Truck per Day (÷ {num_days} hari)").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
     st.plotly_chart(styled_chart(px.bar(total_vol_truck, x="Truck No", y="Avg Load per Trip", text="Avg Load per Trip",
                                         color="Truck No", color_discrete_sequence=color_palette,
-                                        title=f"Avg Load per Truck per Day (Qty ÷ {num_days} hari)").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
+                                        title="Avg Load per Trip per Truck (Volume ÷ Ritase)").update_traces(textposition="outside", cliponaxis=False)), use_container_width=True)
 
     # =========================
     # 5. Distance Analysis
     # =========================
-    st.markdown("<hr><h2>📍 Distance Analysis</h2>", unsafe_allow_html=True)
     col_dist1, col_dist2 = st.columns(2)
     with col_dist1:
         avg_dist_plant = df_filtered.groupby("Plant Name")["Distance"].mean().reset_index()
