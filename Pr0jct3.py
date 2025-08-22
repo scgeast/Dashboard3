@@ -132,21 +132,33 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df.columns = df.columns.str.strip()
 
-    # Rename kolom
-    rename_map = {
-        "Tanggal P": "Dp Date",
-        "Plant Name": "Plant Name",
-        "Area": "Area",
-        "Ritase": "Ritase"
-    }
-    df.rename(columns=rename_map, inplace=True)
+    # -------------------------
+    # DETEKSI KOLOM TANGGAL
+    # -------------------------
+    possible_date_cols = ["Tanggal P", "Dp Date", "Delivery Date", "DP Date"]
+    date_col = next((col for col in possible_date_cols if col in df.columns), None)
+    if date_col is None:
+        st.error("❌ Tidak ditemukan kolom tanggal di file Excel. Harus ada salah satu: " + ", ".join(possible_date_cols))
+    else:
+        df.rename(columns={date_col: "Dp Date"}, inplace=True)
+        df["Dp Date"] = pd.to_datetime(df["Dp Date"], errors='coerce')
 
-    # Tambah kolom default
-    for col in ["Salesman", "End Customer", "Volume", "Truck No", "Distance", "Ritase"]:
+    # -------------------------
+    # DETEKSI KOLOM SALESMAN
+    # -------------------------
+    possible_sales_cols = ["Salesman", "Sales Man"]
+    sales_col = next((col for col in possible_sales_cols if col in df.columns), None)
+    if sales_col is None:
+        df["Sales Man"] = "Unknown"
+    else:
+        df.rename(columns={sales_col: "Sales Man"}, inplace=True)
+
+    # -------------------------
+    # Tambah kolom default lain jika tidak ada
+    # -------------------------
+    for col in ["End Customer", "Volume", "Truck No", "Distance", "Ritase"]:
         if col not in df.columns:
             df[col] = 1 if col in ["Volume", "Ritase", "Distance"] else "Unknown"
-
-    df["Dp Date"] = pd.to_datetime(df["Dp Date"])
 
     # =========================
     # Sidebar Filter
@@ -157,13 +169,15 @@ if uploaded_file:
     area = st.sidebar.multiselect("Area", options=df["Area"].dropna().unique())
     plant_options = df[df["Area"].isin(area)]["Plant Name"].dropna().unique() if area else df["Plant Name"].dropna().unique()
     plant = st.sidebar.multiselect("Plant Name", options=plant_options)
-    salesman = st.sidebar.multiselect("Salesman", options=df["Salesman"].dropna().unique())
+    salesman = st.sidebar.multiselect("Sales Man", options=df["Sales Man"].dropna().unique())
     end_customer = st.sidebar.multiselect("End Customer", options=df["End Customer"].dropna().unique())
 
     if st.sidebar.button("🔄 Reset Filter"):
         st.experimental_rerun()
 
+    # -------------------------
     # Filter Data
+    # -------------------------
     df_filtered = df[
         (df["Dp Date"] >= pd.to_datetime(start_date)) &
         (df["Dp Date"] <= pd.to_datetime(end_date))
@@ -173,7 +187,7 @@ if uploaded_file:
     if plant:
         df_filtered = df_filtered[df_filtered["Plant Name"].isin(plant)]
     if salesman:
-        df_filtered = df_filtered[df_filtered["Salesman"].isin(salesman)]
+        df_filtered = df_filtered[df_filtered["Sales Man"].isin(salesman)]
     if end_customer:
         df_filtered = df_filtered[df_filtered["End Customer"].isin(end_customer)]
 
@@ -219,12 +233,12 @@ if uploaded_file:
         st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
 
     # =========================
-    # Salesman & Customer
+    # Sales Performance
     # =========================
     st.subheader("👤 Performa Sales & Customer")
-    sales_perf = df_filtered.groupby("Salesman")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
-    fig_salesman = px.bar(sales_perf, x="Salesman", y="Volume", text="Volume", color="Salesman",
-                          title="Salesman Performance", color_discrete_sequence=color_palette)
+    sales_perf = df_filtered.groupby("Sales Man")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
+    fig_salesman = px.bar(sales_perf, x="Sales Man", y="Volume", text="Volume", color="Sales Man",
+                          title="Sales Performance", color_discrete_sequence=color_palette)
     st.plotly_chart(styled_chart(fig_salesman, height=500), use_container_width=True)
 
     cust_perf = df_filtered.groupby("End Customer")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
