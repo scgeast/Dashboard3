@@ -153,13 +153,14 @@ if uploaded_file:
     # Total Trip per Truck (Ritase = DP No)
     total_trip = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index(name="Total Trip")
     fig_total_trip = px.bar(total_trip, x="Truck No", y="Total Trip", text="Total Trip", color="Truck No",
-                            color_discrete_sequence=color_palette, title="Total Trip per Truck")
+                        color_discrete_sequence=color_palette, title="Total Trip per Truck")
     fig_total_trip.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_total_trip), use_container_width=True)
 
-    # Avg Trip per Truck (per day) = total Volume / jumlah hari filter
-    avg_trip = df_filtered.groupby("Truck No")["Volume"].sum().reset_index()
-    avg_trip["Avg Trip per Truck"] = avg_trip["Volume"] / num_days
+    # Avg Trip per Truck (per day) = total Volume per truck / jumlah hari filter
+    total_vol_truck = df_filtered.groupby("Truck No")["Volume"].sum().reset_index(name="Total Volume")
+    avg_trip = total_vol_truck.copy()
+    avg_trip["Avg Trip per Truck"] = total_vol_truck["Total Volume"] / num_days
     fig_avg_trip = px.bar(avg_trip, x="Truck No", y="Avg Trip per Truck", text="Avg Trip per Truck",
                           color="Truck No", color_discrete_sequence=color_palette, title="Avg Trip per Truck (per Day)")
     fig_avg_trip.update_traces(textposition="outside", cliponaxis=False)
@@ -172,6 +173,7 @@ if uploaded_file:
                           color="Truck No", color_discrete_sequence=color_palette, title="Avg Load per Trip")
     fig_avg_load.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_avg_load), use_container_width=True)
+
 
     # =========================
     # 5. Distance Analysis
