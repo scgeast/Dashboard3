@@ -67,7 +67,7 @@ if uploaded_file:
         "Sales Man": ["Salesman","Sales Man"],
         "Area": ["Area","Region","Zona"],
         "Plant Name": ["Plant Name","Plant","Factory"],
-        "End Customer": ["End Customer","Customer","Buyer"],
+        "End Customer Name": ["End Customer","Customer","Buyer"],  # <-- ganti di sini
         "Volume": ["Volume","Qty","Quantity"],
         "Ritase": ["Ritase","Trips"],
         "Truck No": ["Truck No","Truck Number","Vehicle"],
@@ -92,14 +92,14 @@ if uploaded_file:
     plant_options = df[df["Area"].isin(area)]["Plant Name"].dropna().unique() if area else df["Plant Name"].dropna().unique()
     plant = st.sidebar.multiselect("Plant Name", options=plant_options)
     salesman = st.sidebar.multiselect("Sales Man", options=df["Sales Man"].dropna().unique())
-    end_customer = st.sidebar.multiselect("End Customer", options=df["End Customer"].dropna().unique())
+    end_customer = st.sidebar.multiselect("End Customer Name", options=df["End Customer Name"].dropna().unique())
     if st.sidebar.button("🔄 Reset Filter"): st.experimental_rerun()
 
     df_filtered = df[(df["Dp Date"]>=pd.to_datetime(start_date)) & (df["Dp Date"]<=pd.to_datetime(end_date))]
     if area: df_filtered = df_filtered[df_filtered["Area"].isin(area)]
     if plant: df_filtered = df_filtered[df_filtered["Plant Name"].isin(plant)]
     if salesman: df_filtered = df_filtered[df_filtered["Sales Man"].isin(salesman)]
-    if end_customer: df_filtered = df_filtered[df_filtered["End Customer"].isin(end_customer)]
+    if end_customer: df_filtered = df_filtered[df_filtered["End Customer Name"].isin(end_customer)]
 
     # =========================
     # Summary Metrics
@@ -110,7 +110,7 @@ if uploaded_file:
     with cols[1]: boxed_metric("Total Plant", df_filtered["Plant Name"].nunique())
     with cols[2]: boxed_metric("Total Volume", f"{df_filtered['Volume'].sum():,.2f}")
     with cols[3]: boxed_metric("Total Ritase", f"{df_filtered['Ritase'].sum():,.2f}")
-    with cols[4]: boxed_metric("End Customer", df_filtered["End Customer"].nunique())
+    with cols[4]: boxed_metric("End Customer Name", df_filtered["End Customer Name"].nunique())
     with cols[5]: boxed_metric("Truck Mixer", df_filtered["Truck No"].nunique())
 
     # =========================
@@ -167,8 +167,8 @@ if uploaded_file:
         fig_sales.update_traces(textposition="outside")
         st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
     with col_cust:
-        cust_perf = df_filtered.groupby("End Customer")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        fig_cust = px.bar(cust_perf, x="End Customer", y="Volume", text="Volume", color="End Customer", color_discrete_sequence=color_palette)
+        cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
+        fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="End Customer Name", color_discrete_sequence=color_palette)
         fig_cust.update_traces(textposition="outside")
         st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
 
