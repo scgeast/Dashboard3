@@ -67,7 +67,7 @@ if uploaded_file:
         "Sales Man": ["Salesman","Sales Man"],
         "Area": ["Area","Region","Zona"],
         "Plant Name": ["Plant Name","Plant","Factory"],
-        "End Customer Name": ["End Customer","Customer","Buyer"],
+        "End Customer Name": ["End Customer","Customer","Buyer","End Customer Name"],
         "End Customer No": ["End Customer No","Customer No","Buyer No"],
         "Volume": ["Volume","Qty","Quantity"],
         "Ritase": ["Ritase","Trips"],
@@ -194,11 +194,15 @@ if uploaded_file:
         fig_sales.update_traces(textposition="outside")
         st.plotly_chart(styled_chart(fig_sales, height=500), use_container_width=True)
     with col_cust:
+        # cek apakah ada data sebelum plot
         cust_perf = df_filtered.groupby("End Customer Name")["Volume"].sum().reset_index().sort_values("Volume", ascending=False)
-        fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="End Customer Name",
-                          color_discrete_sequence=color_palette, title="Volume per End Customer Name")
-        fig_cust.update_traces(textposition="outside")
-        st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
+        if not cust_perf.empty:
+            fig_cust = px.bar(cust_perf, x="End Customer Name", y="Volume", text="Volume", color="End Customer Name",
+                              color_discrete_sequence=color_palette, title="Volume per End Customer Name")
+            fig_cust.update_traces(textposition="outside")
+            st.plotly_chart(styled_chart(fig_cust, height=500), use_container_width=True)
+        else:
+            st.info("No data available for End Customer Name")
 
 else:
     st.info("📤 Silakan upload file Excel terlebih dahulu untuk menampilkan dashboard.")
