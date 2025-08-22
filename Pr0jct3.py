@@ -165,8 +165,9 @@ if uploaded_file:
     fig_avg_trip.update_traces(textposition="outside", cliponaxis=False)
     st.plotly_chart(styled_chart(fig_avg_trip), use_container_width=True)
 
-    # Avg Load per Trip (rata-rata Volume per Truck)
-    avg_load = df_filtered.groupby("Truck No")["Volume"].mean().reset_index(name="Avg Load per Trip")
+    # Avg Load per Trip = Total Volume per Truck / Total Trip per Truck
+    avg_load = pd.merge(total_vol_truck, total_trip, on="Truck No")
+    avg_load["Avg Load per Trip"] = avg_load["Total Volume"] / avg_load["Total Trip"]
     fig_avg_load = px.bar(avg_load, x="Truck No", y="Avg Load per Trip", text="Avg Load per Trip",
                           color="Truck No", color_discrete_sequence=color_palette, title="Avg Load per Trip")
     fig_avg_load.update_traces(textposition="outside", cliponaxis=False)
